@@ -27,7 +27,6 @@ before_install:
   env:
     TARGET_PKG: cherry_picker
   install:
-  - &cd-to-project pushd "$TARGET_PKG"
   - flit install
   script:
   - pytest cherry_picker/test.py -v
@@ -36,8 +35,6 @@ before_install:
   stage: Publish dists to PYPI
   <<: *run-if-tagged
   python: "3.6"
-  install:
-  - *cd-to-project
   script:
   - flit build
   before_deploy:
