@@ -5,7 +5,7 @@ git:
 
 language: python
 
-dist: trusty
+dist: xenial
 cache: pip
 
 before_install:
