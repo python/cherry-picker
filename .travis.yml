@@ -30,7 +30,6 @@ before_install:
   - flit install
   script:
   - pytest cherry_picker/test.py -v
-  - popd
 - &deploy-base
   stage: Publish dists to PYPI
   <<: *run-if-tagged
