@@ -16,7 +16,7 @@ python:
 
 
 install:
-- python -m pip install --upgrade flit
+- python -m pip install --upgrade flit pip
 - flit install
 
 script:
