@@ -3,84 +3,66 @@ conditions: v1
 git:
   depth: false
 
-language: python
 
 dist: xenial
 cache: pip
 
-before_install:
-- &install-flit >-
-  pip install --upgrade pip flit
 
-.mixtures:
-- &run-if-tagged
-  if: tag IS present
-- &run-if-cherry-picker
-  if: tag =~ ^cherry\-picker\-v\d+\.\d+\.\d+$
-- &run-if-cherry-picker-or-untagged
-  if: tag IS NOT present OR tag =~ ^cherry\-picker\-v\d+\.\d+\.\d+$
-- &base-3_7
-  dist: xenial
-  python: "3.7"
-- &install-and-test-cherry-picker
-  <<: *run-if-cherry-picker-or-untagged
-  env:
-    TARGET_PKG: cherry_picker
-  install:
-  - flit install
-  script:
-  - pytest cherry_picker/test.py -v
-- &deploy-base
-  stage: Publish dists to PYPI
-  <<: *run-if-tagged
-  python: "3.6"
-  script:
-  - flit build
-  before_deploy:
-  # Add an empty setup.py stub, because pypi provider always calls it
-  - touch setup.py
-  deploy: &deployment-config
-    provider: pypi
-    # `skip-cleanup: true` is required to preserve binary wheel and sdist,
-    # built by during `install` step above.
-    skip-cleanup: true
-    # `skip-existing: true` is required to skip uploading dists, already
-    # present in PyPI instead of failing the whole process.
-    # This happenes when other CI (AppVeyor etc.) has already uploaded
-    # the very same dist (usually sdist).
-    skip-existing: true
-    user: &pypi-user core-workflow
-    password: &pypi-password
-      # Encrypt with `travis encrypt -r python/core-workflow --org` while using travis-ci.org;
-      # change to `travis encrypt -r python/core-workflow --api-endpoint 'https://api.travis-ci.com/'`
-      # upon switch to __free__ travis-ci.com:
-      secure: "ec2BNgqhpXEY2mdNCmfs+lfufIpMAyvOMLDPyikJBwTkmEAQWEmBxNPt67vnun6ODKVuneYYvZCxnpcvASii/2DoBomVhWCVqmFQk888ehG31gKBhcRfTYePZ9B/1GNLchj+Z53eTJX3LVZBur6eICK1DxmgjHKLFSqYKCdxmuw+S8ethDzDE6cX5ce6D2+KDBMN2tUc1C9t15Q9sk8EgElY1JwRaiJ28uZsNfZQcP3rkusbDYPK5mFFJIv6xgEQbA31EvHU9/zvHYf7KwtkkgQzV4wN+FCr/ekGp9T8YneFSrioCY6nGznzsHcKXJsUuJEKBvjwOxy26/RfO/O+0cN6b3fGmI9wQVAnhbd/WszdN0/RmOtwXcJS/uxDTZSPcrXTKRqWaESKt9tGDXeFKLyrpi5Rc9wnxonVzwAOKZSody+ADG6EfLNsVJZt+RM3nV9aOgS20pCctsgqgW+qYBkmpYuAbIyaZRe3oi6lzYWXfZcwN2JIgiy7LVNn+JBPmNT3W21oR13TA7GDy/sWec9Odds4uZXUqfpkdVl+9/TzugH1VtgzhOyC/nU7y/m0Uo5q4QYTkAEZUrYP1N/FEUnvwLRHsqUzWk5beJtycOsHoOj7O9KG1g9gWfBxjfN3N5D2n1P7Xvf4dwcKc+mBVmq6tjAQYgqSdYttKrQPxrw="
-    on:
-      tags: true
-      all_branches: true
+language: python
+python:
+- "3.7"
+- "3.6"
+- "nightly"  # currently, it's 3.8-dev
+
+
+install:
+- python -m pip install --upgrade flit
+- flit install
+
+script:
+- pytest cherry_picker/test.py -v
+
 
 jobs:
   include:
-  - python: "3.6"
-    <<: *install-and-test-cherry-picker
-  - <<: *base-3_7
-    <<: *install-and-test-cherry-picker
-  - python: "nightly"  # currently, it's 3.8-dev
-    <<: *install-and-test-cherry-picker
-  - os: windows
+  - name: Python 3.7 under Windows
+    os: windows
     language: sh
-    python: 3.7
+    python: "3.7"
     before_install:
-      - choco install python --version 3.7
-      - python -m pip install --upgrade pip wheel
-      - *install-flit
-    <<: *install-and-test-cherry-picker
+    - choco install python --version 3.7
     env:
       PATH: >-
         /c/Python37:/c/Python37/Scripts:$PATH
-      TARGET_PKG: cherry_picker
 
-  - <<: *deploy-base
-    <<: *run-if-cherry-picker
-    env:
-      TARGET_PKG: cherry_picker
+  - name: Publish dists to production PyPI
+    stage: Publish dists to PYPI
+    if: tag IS present
+    python: "3.7"
+    script:
+    - flit build
+    before_deploy:
+    # Add an empty setup.py stub, because Travis' pypi provider always
+    # calls it and will fail if it's missing. It won't actually get
+    # bundled into dists.
+    - touch setup.py
+    deploy:
+      provider: pypi
+      # `skip-cleanup: true` is required to preserve binary wheel and sdist,
+      # built by during `install` step above.
+      skip-cleanup: true
+      # `skip-existing: true` is required to skip uploading dists, already
+      # present in PyPI instead of failing the whole process.
+      # This happenes when other CI (AppVeyor etc.) has already uploaded
+      # the very same dist (usually sdist).
+      skip-existing: true
+      user: &pypi-user core-workflow
+      password: &pypi-password
+        # Encrypt with `travis encrypt -r python/core-workflow --org` while using travis-ci.org;
+        # change to `travis encrypt -r python/core-workflow --api-endpoint 'https://api.travis-ci.com/'`
+        # upon switch to __free__ travis-ci.com:
+        secure: >-
+          ec2BNgqhpXEY2mdNCmfs+lfufIpMAyvOMLDPyikJBwTkmEAQWEmBxNPt67vnun6ODKVuneYYvZCxnpcvASii/2DoBomVhWCVqmFQk888ehG31gKBhcRfTYePZ9B/1GNLchj+Z53eTJX3LVZBur6eICK1DxmgjHKLFSqYKCdxmuw+S8ethDzDE6cX5ce6D2+KDBMN2tUc1C9t15Q9sk8EgElY1JwRaiJ28uZsNfZQcP3rkusbDYPK5mFFJIv6xgEQbA31EvHU9/zvHYf7KwtkkgQzV4wN+FCr/ekGp9T8YneFSrioCY6nGznzsHcKXJsUuJEKBvjwOxy26/RfO/O+0cN6b3fGmI9wQVAnhbd/WszdN0/RmOtwXcJS/uxDTZSPcrXTKRqWaESKt9tGDXeFKLyrpi5Rc9wnxonVzwAOKZSody+ADG6EfLNsVJZt+RM3nV9aOgS20pCctsgqgW+qYBkmpYuAbIyaZRe3oi6lzYWXfZcwN2JIgiy7LVNn+JBPmNT3W21oR13TA7GDy/sWec9Odds4uZXUqfpkdVl+9/TzugH1VtgzhOyC/nU7y/m0Uo5q4QYTkAEZUrYP1N/FEUnvwLRHsqUzWk5beJtycOsHoOj7O9KG1g9gWfBxjfN3N5D2n1P7Xvf4dwcKc+mBVmq6tjAQYgqSdYttKrQPxrw=
+      on:
+        tags: true
+        all_branches: true
