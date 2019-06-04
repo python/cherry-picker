@@ -33,7 +33,7 @@ from .cherry_picker import (
 
 @pytest.fixture
 def config():
-    check_sha = "dc896437c8efe5a4a5dfa50218b7a6dc0cbe2598"
+    check_sha = "0694156a5f80fd1647ed997470d3d03ed87f9d9f"
     return ChainMap(DEFAULT_CONFIG).new_child({"check_sha": check_sha})
 
 
