@@ -20,7 +20,7 @@ install:
 - flit install
 
 script:
-- pytest cherry_picker/test.py -v
+- pytest
 
 
 jobs:
