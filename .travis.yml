@@ -62,7 +62,7 @@ jobs:
         # change to `travis encrypt -r python/cherry-picker --api-endpoint 'https://api.travis-ci.com/'`
         # upon switch to __free__ travis-ci.com:
         secure: >-
-          ec2BNgqhpXEY2mdNCmfs+lfufIpMAyvOMLDPyikJBwTkmEAQWEmBxNPt67vnun6ODKVuneYYvZCxnpcvASii/2DoBomVhWCVqmFQk888ehG31gKBhcRfTYePZ9B/1GNLchj+Z53eTJX3LVZBur6eICK1DxmgjHKLFSqYKCdxmuw+S8ethDzDE6cX5ce6D2+KDBMN2tUc1C9t15Q9sk8EgElY1JwRaiJ28uZsNfZQcP3rkusbDYPK5mFFJIv6xgEQbA31EvHU9/zvHYf7KwtkkgQzV4wN+FCr/ekGp9T8YneFSrioCY6nGznzsHcKXJsUuJEKBvjwOxy26/RfO/O+0cN6b3fGmI9wQVAnhbd/WszdN0/RmOtwXcJS/uxDTZSPcrXTKRqWaESKt9tGDXeFKLyrpi5Rc9wnxonVzwAOKZSody+ADG6EfLNsVJZt+RM3nV9aOgS20pCctsgqgW+qYBkmpYuAbIyaZRe3oi6lzYWXfZcwN2JIgiy7LVNn+JBPmNT3W21oR13TA7GDy/sWec9Odds4uZXUqfpkdVl+9/TzugH1VtgzhOyC/nU7y/m0Uo5q4QYTkAEZUrYP1N/FEUnvwLRHsqUzWk5beJtycOsHoOj7O9KG1g9gWfBxjfN3N5D2n1P7Xvf4dwcKc+mBVmq6tjAQYgqSdYttKrQPxrw=
+          lBje6oa0VUCeG/btHJbNMc5LzH8BhjhmpP02S6PiCpXP6ZfhpP8cjaK+kEXkUWcdxmztnJYogVTE4efS9xSGO9bgJ37h8KgbOwRueUJpypZwjQiYECnJWHDqEQZlu8JXxHTrm3caAWMAFp4Volduzum/UiHAHLaaqzl9y2Sgzqkx1bm4u0r8Cb79fmUR5MxIFEXcK/TblVHvXXimWSGn5zWlRoin1xO6a0lTkYFt3XAE/uPWDwDWUl5KmLGoNd7HKJqx6TfOAbJIcu1kNBxqMYgu849Q2MwTherkKrTtXtKVuZaSX2ZrydO7dAWQpFvcb0Dd/VWAwQpbHrQJPfh0Uzxpv/t0KoNNWvrjRx2KnqUcphhOWBiv18aLaYBBUrMahyUKk1SifM/W/JdJ/RjMRNBlmzkqgpviNgIDJU26cSORFC2xQzgb+cPA8HUsqvZaJiCAQ/Zz4PZYib+3cM+Vfp1q/hAfREFnuojWEDXddPuiXqgZissHrsybQ+K4sHymioV8MW/nR1k6e3lUDjIkeuwxFANA3JIdunTWmy4Pm3ItPi2DV1hEIcLGFjO5Oa4P2QbHcQBnCgK7XdInFAjF0sf6ZmUvJcKFiVm7UODBj5zlYHaKKdOJTe3kLFP5iwinIk5CZCps34WYPvvXvFvLSamv7caxh4ySVupPn85voYQ=
       on:
         tags: true
         all_branches: true
