@@ -1,0 +1,68 @@
+conditions: v1
+
+git:
+  depth: false
+
+
+dist: xenial
+cache: pip
+
+
+language: python
+python:
+- "3.7"
+- "3.6"
+- "nightly"  # currently, it's 3.8-dev
+
+
+install:
+- python -m pip install --upgrade flit pip
+- flit install
+
+script:
+- pytest
+
+
+jobs:
+  include:
+  - name: Python 3.7 under Windows
+    os: windows
+    language: sh
+    python: "3.7"
+    before_install:
+    - choco install python --version 3.7
+    env:
+      PATH: >-
+        /c/Python37:/c/Python37/Scripts:$PATH
+
+  - name: Publish dists to production PyPI
+    stage: Publish dists to PYPI
+    if: tag IS present
+    python: "3.7"
+    script:
+    - flit build
+    before_deploy:
+    # Add an empty setup.py stub, because Travis' pypi provider always
+    # calls it and will fail if it's missing. It won't actually get
+    # bundled into dists.
+    - touch setup.py
+    deploy:
+      provider: pypi
+      # `skip-cleanup: true` is required to preserve binary wheel and sdist,
+      # built by during `install` step above.
+      skip-cleanup: true
+      # `skip-existing: true` is required to skip uploading dists, already
+      # present in PyPI instead of failing the whole process.
+      # This happenes when other CI (AppVeyor etc.) has already uploaded
+      # the very same dist (usually sdist).
+      skip-existing: true
+      user: &pypi-user core-workflow
+      password: &pypi-password
+        # Encrypt with `travis encrypt -r python/cherry-picker --org` while using travis-ci.org;
+        # change to `travis encrypt -r python/cherry-picker --api-endpoint 'https://api.travis-ci.com/'`
+        # upon switch to __free__ travis-ci.com:
+        secure: >-
+          lBje6oa0VUCeG/btHJbNMc5LzH8BhjhmpP02S6PiCpXP6ZfhpP8cjaK+kEXkUWcdxmztnJYogVTE4efS9xSGO9bgJ37h8KgbOwRueUJpypZwjQiYECnJWHDqEQZlu8JXxHTrm3caAWMAFp4Volduzum/UiHAHLaaqzl9y2Sgzqkx1bm4u0r8Cb79fmUR5MxIFEXcK/TblVHvXXimWSGn5zWlRoin1xO6a0lTkYFt3XAE/uPWDwDWUl5KmLGoNd7HKJqx6TfOAbJIcu1kNBxqMYgu849Q2MwTherkKrTtXtKVuZaSX2ZrydO7dAWQpFvcb0Dd/VWAwQpbHrQJPfh0Uzxpv/t0KoNNWvrjRx2KnqUcphhOWBiv18aLaYBBUrMahyUKk1SifM/W/JdJ/RjMRNBlmzkqgpviNgIDJU26cSORFC2xQzgb+cPA8HUsqvZaJiCAQ/Zz4PZYib+3cM+Vfp1q/hAfREFnuojWEDXddPuiXqgZissHrsybQ+K4sHymioV8MW/nR1k6e3lUDjIkeuwxFANA3JIdunTWmy4Pm3ItPi2DV1hEIcLGFjO5Oa4P2QbHcQBnCgK7XdInFAjF0sf6ZmUvJcKFiVm7UODBj5zlYHaKKdOJTe3kLFP5iwinIk5CZCps34WYPvvXvFvLSamv7caxh4ySVupPn85voYQ=
+      on:
+        tags: true
+        all_branches: true
