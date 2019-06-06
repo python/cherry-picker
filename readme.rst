@@ -329,8 +329,8 @@ in the directory where ``pyproject.toml`` exists::
 .. |pypi status| image:: https://img.shields.io/pypi/v/cherry-picker.svg
    :target: https://pypi.org/project/cherry-picker/
 
-.. |travis status| image:: https://travis-ci.org/python/core-workflow.svg?branch=master
-   :target: https://travis-ci.org/python/core-workflow
+.. |travis status| image:: https://travis-ci.com/python/cherry-picker.svg?branch=master
+   :target: https://travis-ci.com/python/cherry-picker
 
 Changelog
 =========
