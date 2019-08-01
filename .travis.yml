@@ -56,13 +56,13 @@ jobs:
       # This happenes when other CI (AppVeyor etc.) has already uploaded
       # the very same dist (usually sdist).
       skip-existing: true
-      user: &pypi-user core-workflow
+      user: &pypi-user @token
       password: &pypi-password
         # Encrypt with `travis encrypt -r python/cherry-picker --org` while using travis-ci.org;
         # change to `travis encrypt -r python/cherry-picker --api-endpoint 'https://api.travis-ci.com/'`
         # upon switch to __free__ travis-ci.com:
         secure: >-
-          lBje6oa0VUCeG/btHJbNMc5LzH8BhjhmpP02S6PiCpXP6ZfhpP8cjaK+kEXkUWcdxmztnJYogVTE4efS9xSGO9bgJ37h8KgbOwRueUJpypZwjQiYECnJWHDqEQZlu8JXxHTrm3caAWMAFp4Volduzum/UiHAHLaaqzl9y2Sgzqkx1bm4u0r8Cb79fmUR5MxIFEXcK/TblVHvXXimWSGn5zWlRoin1xO6a0lTkYFt3XAE/uPWDwDWUl5KmLGoNd7HKJqx6TfOAbJIcu1kNBxqMYgu849Q2MwTherkKrTtXtKVuZaSX2ZrydO7dAWQpFvcb0Dd/VWAwQpbHrQJPfh0Uzxpv/t0KoNNWvrjRx2KnqUcphhOWBiv18aLaYBBUrMahyUKk1SifM/W/JdJ/RjMRNBlmzkqgpviNgIDJU26cSORFC2xQzgb+cPA8HUsqvZaJiCAQ/Zz4PZYib+3cM+Vfp1q/hAfREFnuojWEDXddPuiXqgZissHrsybQ+K4sHymioV8MW/nR1k6e3lUDjIkeuwxFANA3JIdunTWmy4Pm3ItPi2DV1hEIcLGFjO5Oa4P2QbHcQBnCgK7XdInFAjF0sf6ZmUvJcKFiVm7UODBj5zlYHaKKdOJTe3kLFP5iwinIk5CZCps34WYPvvXvFvLSamv7caxh4ySVupPn85voYQ=
+          aOzHY6j79JqA8/RyNH3akuaeTs0wcDoto3jok+VhbeyIcWEhCI/aqcvDLA7Ld/8p3lQX1JUUWwOyHCEx3UDSDWug/HogbVE5KTT7A+p6gu0ojEXylflOZm6d9E2Ee/VGLXFRISSYQ+Siv8lHqJ1DQ1sUjmmq9rvtdputmRWiJUo1ONfB7eJAiLP/aPF6jn3bUF6dHnOa5lcwjMLypl9v4g4iJsuHFztZIx02NS/Jdh/njDeAQfF8Dx5aG045fAxXd1Nz+Nx2nJUUqUWE5d8RiGTi2nDXTt2f6okZrEDXBsX369yvFED7JTVm7PxeXc7e7r/pB7xseZi5+PeiHZuSYYNOJ9M/sV6Nycjnu8xOKmKEATX0RReS2381k+0SumcoDAH5RYmGlzKrsjEQSJVNPETSnOUqQMuYxze7VIH/ok8aMHa3k38EG3nC/bfT4b38csDbp3lvN7AaWn3OWg2VOdXygOuAIPMt2GfPgY+3EmH7PhtKkIOuD8+2t8LQJ2BgwLa7j91vIFuTfewPjK4AX6YBq6wPLeh44rpXE6/oZhvia0CDgRKPVU13055i3bME/9sjIX5WQigw29h05uI+wEGqNaYu1tI1lbR1qDb8K07xPGAEkjfAbwitQ4y+JcSlIk/R1x3inxlfkw31ceQqe4szaZ/qOD4M5GxRu22lAHg=
       on:
         tags: true
         all_branches: true
