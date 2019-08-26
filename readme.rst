@@ -90,18 +90,18 @@ Options
 
 ::
 
-    -- dry-run           Dry Run Mode.  Prints out the commands, but not executed.
-    -- pr-remote REMOTE  Specify the git remote to push into.  Default is 'origin'.
-    -- status            Do `git status` in cpython directory.
+    --dry-run           Dry Run Mode.  Prints out the commands, but not executed.
+    --pr-remote REMOTE  Specify the git remote to push into.  Default is 'origin'.
+    --status            Do `git status` in cpython directory.
 
 
 Additional options::
 
-    -- abort        Abort current cherry-pick and clean up branch
-    -- continue     Continue cherry-pick, push, and clean up branch
-    -- no-push      Changes won't be pushed to remote
-    -- config-path  Path to config file
-                    (`.cherry_picker.toml` from project root by default)
+    --abort        Abort current cherry-pick and clean up branch
+    --continue     Continue cherry-pick, push, and clean up branch
+    --no-push      Changes won't be pushed to remote
+    --config-path  Path to config file
+                   (`.cherry_picker.toml` from project root by default)
 
 
 Configuration file example::
