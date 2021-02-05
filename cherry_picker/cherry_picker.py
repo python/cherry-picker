@@ -277,7 +277,7 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
                 click.echo(cpe.output)
         return updated_commit_message
 
-    def push_to_remote(self, base_branch, head_branch, commit_message=""):
+    def push_to_remote(self, base_branch, head_branch, commit_message):
         """ git push <origin> <branchname> """
         set_state(WORKFLOW_STATES.PUSHING_TO_REMOTE)
 
@@ -468,7 +468,10 @@ To abort the cherry-pick and cleanup:
                 ]
                 subprocess.check_output(cmd, stderr=subprocess.STDOUT)
 
-            self.push_to_remote(base, cherry_pick_branch)
+            self.push_to_remote(
+                base, cherry_pick_branch,
+                updated_commit_message,
+            )
 
             self.cleanup_branch(cherry_pick_branch)
 
