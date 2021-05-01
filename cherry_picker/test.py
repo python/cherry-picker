@@ -608,7 +608,9 @@ def test_cherry_pick(tmp_git_repo_dir, git_add, git_branch, git_commit, git_chec
     cherry_picker.cherry_pick()
 
 
-def test_cherry_pick_fail(tmp_git_repo_dir,):
+def test_cherry_pick_fail(
+    tmp_git_repo_dir,
+):
     with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
         cherry_picker = CherryPicker("origin", "xxx", [])
 
@@ -616,7 +618,9 @@ def test_cherry_pick_fail(tmp_git_repo_dir,):
         cherry_picker.cherry_pick()
 
 
-def test_get_state_and_verify_fail(tmp_git_repo_dir,):
+def test_get_state_and_verify_fail(
+    tmp_git_repo_dir,
+):
     class tested_state:
         name = "invalid_state"
 
