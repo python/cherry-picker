@@ -11,7 +11,7 @@ Usage (from a cloned CPython directory) ::
 About
 =====
 
-This tool is used to backport CPython changes from ``master`` into one or more
+This tool is used to backport CPython changes from ``main`` into one or more
 of the maintenance branches (``3.6``, ``3.5``, ``2.7``).
 
 ``cherry_picker`` can be configured to backport other projects with similar
@@ -76,10 +76,10 @@ Commit sha1
 -----------
 
 The commit sha1 for cherry-picking is the squashed commit that was merged to
-the ``master`` branch.  On the merged pull request, scroll to the bottom of the
+the ``main`` branch.  On the merged pull request, scroll to the bottom of the
 page.  Find the event that says something like::
 
-   <coredeveloper> merged commit <commit_sha1> into python:master <sometime> ago.
+   <coredeveloper> merged commit <commit_sha1> into python:main <sometime> ago.
 
 By following the link to ``<commit_sha1>``, you will get the full commit hash.
 Use the full commit hash for ``cherry_picker.py``.
@@ -136,7 +136,7 @@ Available config options::
 
    repo            Project's default branch name,
                    e.g "devel" for https://github.com/ansible/ansible
-                   ("master" by default)
+                   ("main" by default)
 
 
 To customize the tool for used by other project:
@@ -190,13 +190,13 @@ What this will do:
     (venv) $ git checkout -b backport-6de2b78-3.5 upstream/3.5
     (venv) $ git cherry-pick -x 6de2b7817f-some-commit-sha1-d064
     (venv) $ git push origin backport-6de2b78-3.5
-    (venv) $ git checkout master
+    (venv) $ git checkout main
     (venv) $ git branch -D backport-6de2b78-3.5
 
     (venv) $ git checkout -b backport-6de2b78-3.6 upstream/3.6
     (venv) $ git cherry-pick -x 6de2b7817f-some-commit-sha1-d064
     (venv) $ git push origin backport-6de2b78-3.6
-    (venv) $ git checkout master
+    (venv) $ git checkout main
     (venv) $ git branch -D backport-6de2b78-3.6
 
 In case of merge conflicts or errors, the following message will be displayed::
@@ -226,14 +226,14 @@ steps it would execute without actually executing any of them. For example::
     dry_run: git cherry-pick -x 1e32a1be4a1705e34011770026cb64ada2d340b5
     dry_run: git push pr backport-1e32a1b-3.6
     dry_run: Create new PR: https://github.com/python/cpython/compare/3.6...ncoghlan:backport-1e32a1b-3.6?expand=1
-    dry_run: git checkout master
+    dry_run: git checkout main
     dry_run: git branch -D backport-1e32a1b-3.6
     Now backporting '1e32a1be4a1705e34011770026cb64ada2d340b5' into '3.5'
     dry_run: git checkout -b backport-1e32a1b-3.5 origin/3.5
     dry_run: git cherry-pick -x 1e32a1be4a1705e34011770026cb64ada2d340b5
     dry_run: git push pr backport-1e32a1b-3.5
     dry_run: Create new PR: https://github.com/python/cpython/compare/3.5...ncoghlan:backport-1e32a1b-3.5?expand=1
-    dry_run: git checkout master
+    dry_run: git checkout main
     dry_run: git branch -D backport-1e32a1b-3.5
 
 `--pr-remote` option
@@ -291,7 +291,7 @@ The url of the pull request page looks similar to the following::
 Press the ``Create Pull Request`` button.
 
 Bedevere will then remove the ``needs backport to ...`` label from the original
-pull request against ``master``.
+pull request against ``main``.
 
 
 Running Tests
@@ -329,7 +329,7 @@ in the directory where ``pyproject.toml`` exists::
 .. |pypi status| image:: https://img.shields.io/pypi/v/cherry-picker.svg
    :target: https://pypi.org/project/cherry-picker/
 
-.. |travis status| image:: https://travis-ci.com/python/cherry-picker.svg?branch=master
+.. |travis status| image:: https://travis-ci.com/python/cherry-picker.svg?branch=main
    :target: https://travis-ci.com/python/cherry-picker
 
 Changelog
