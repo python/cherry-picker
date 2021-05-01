@@ -52,7 +52,7 @@ def cd():
 
 @pytest.fixture
 def git_init():
-    git_init_cmd = "git", "init", "."
+    git_init_cmd = "git", "init", "--initial-branch=main", "."
     return lambda: subprocess.run(git_init_cmd, check=True)
 
 
