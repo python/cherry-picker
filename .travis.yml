@@ -16,6 +16,10 @@ python:
 - "3.6"
 - "nightly"  # currently, it's 3.10
 
+matrix:
+  allow_failures:
+    - python: "nightly"
+      dist: focal
 
 install:
 - python -m pip install --upgrade flit pip
