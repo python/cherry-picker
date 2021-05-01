@@ -4,7 +4,7 @@ git:
   depth: false
 
 
-dist: xenial
+dist: focal
 cache: pip
 
 
@@ -14,7 +14,7 @@ python:
 - "3.8"
 - "3.7"
 - "3.6"
-- "nightly"  # currently, it's 3.8-dev
+- "nightly"  # currently, it's 3.10
 
 
 install:
