@@ -335,9 +335,11 @@ in the directory where ``pyproject.toml`` exists::
 Changelog
 =========
 
-1.3.3 (in development)
+2.0.0 (in development)
 ----------------------
 
+- Support the ``main`` branch by default. To use a different default branch,
+  please configure it in the ``.cherry-picker.toml`` file.
 
 1.3.2
 -----
