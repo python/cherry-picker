@@ -52,7 +52,7 @@ def cd():
 
 @pytest.fixture
 def git_init():
-    git_init_cmd = "git", "init", "."
+    git_init_cmd = "git", "init", "--initial-branch=main", "."
     return lambda: subprocess.run(git_init_cmd, check=True)
 
 
@@ -143,8 +143,8 @@ def test_get_base_branch_invalid(subprocess_check_output, cherry_pick_branch):
 
 @mock.patch("subprocess.check_output")
 def test_get_current_branch(subprocess_check_output):
-    subprocess_check_output.return_value = b"master"
-    assert get_current_branch() == "master"
+    subprocess_check_output.return_value = b"main"
+    assert get_current_branch() == "main"
 
 
 @mock.patch("subprocess.check_output")
@@ -368,7 +368,7 @@ def test_load_partial_config(tmp_git_repo_dir, git_add, git_commit):
             "repo": "core-workfolow",
             "team": "python",
             "fix_commit_msg": True,
-            "default_branch": "master",
+            "default_branch": "main",
         },
     )
 
@@ -608,7 +608,9 @@ def test_cherry_pick(tmp_git_repo_dir, git_add, git_branch, git_commit, git_chec
     cherry_picker.cherry_pick()
 
 
-def test_cherry_pick_fail(tmp_git_repo_dir,):
+def test_cherry_pick_fail(
+    tmp_git_repo_dir,
+):
     with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
         cherry_picker = CherryPicker("origin", "xxx", [])
 
@@ -616,7 +618,9 @@ def test_cherry_pick_fail(tmp_git_repo_dir,):
         cherry_picker.cherry_pick()
 
 
-def test_get_state_and_verify_fail(tmp_git_repo_dir,):
+def test_get_state_and_verify_fail(
+    tmp_git_repo_dir,
+):
     class tested_state:
         name = "invalid_state"
 
@@ -648,7 +652,7 @@ def test_push_to_remote_fail(tmp_git_repo_dir):
     with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
         cherry_picker = CherryPicker("origin", "xxx", [])
 
-    cherry_picker.push_to_remote("master", "backport-branch-test")
+    cherry_picker.push_to_remote("main", "backport-branch-test")
     assert get_state() == WORKFLOW_STATES.PUSHING_TO_REMOTE_FAILED
 
 
@@ -659,7 +663,7 @@ def test_push_to_remote_interactive(tmp_git_repo_dir):
     with mock.patch.object(cherry_picker, "run_cmd"), mock.patch.object(
         cherry_picker, "open_pr"
     ), mock.patch.object(cherry_picker, "get_pr_url", return_value="https://pr_url"):
-        cherry_picker.push_to_remote("master", "backport-branch-test")
+        cherry_picker.push_to_remote("main", "backport-branch-test")
     assert get_state() == WORKFLOW_STATES.PR_OPENING
 
 
@@ -671,7 +675,7 @@ def test_push_to_remote_botflow(tmp_git_repo_dir, monkeypatch):
     with mock.patch.object(cherry_picker, "run_cmd"), mock.patch.object(
         cherry_picker, "create_gh_pr"
     ):
-        cherry_picker.push_to_remote("master", "backport-branch-test")
+        cherry_picker.push_to_remote("main", "backport-branch-test")
     assert get_state() == WORKFLOW_STATES.PR_CREATING
 
 

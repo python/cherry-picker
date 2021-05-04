@@ -25,7 +25,7 @@ DEFAULT_CONFIG = collections.ChainMap(
         "repo": "cpython",
         "check_sha": "7f777ed95a19224294949e1b4ce56bbffcb1fe9f",
         "fix_commit_msg": True,
-        "default_branch": "master",
+        "default_branch": "main",
     }
 )
 
