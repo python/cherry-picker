@@ -930,3 +930,7 @@ def test_abort_cherry_pick_success(
         cherry_picker.abort_cherry_pick()
 
     assert get_state() == WORKFLOW_STATES.REMOVED_BACKPORT_BRANCH
+
+
+def test_cli_invoked():
+    subprocess.check_call('cherry_picker --help'.split())
