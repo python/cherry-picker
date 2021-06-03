@@ -16,7 +16,7 @@ requires-python = ">=3.6"
 
 
 [tool.flit.scripts]
-cherry_picker = "cherry_picker:cherry_pick_cli"
+cherry_picker = "cherry_picker.cherry_picker:cherry_pick_cli"
 
 [tool.flit.metadata.requires-extra]
 dev = ["pytest"]
