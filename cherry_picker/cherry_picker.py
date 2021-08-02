@@ -284,7 +284,7 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
         cmd = ["git", "push"]
         if head_branch.startswith("backport-"):
             # Overwrite potential stale backport branches with extreme prejudice.
-            cmd.append("-f")
+            cmd.append("--force-with-lease")
         cmd += [self.pr_remote, f"{head_branch}:{head_branch}"]
         try:
             self.run_cmd(cmd)
