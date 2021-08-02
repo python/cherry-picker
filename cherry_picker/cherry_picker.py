@@ -284,7 +284,11 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
         """ git push <origin> <branchname> """
         set_state(WORKFLOW_STATES.PUSHING_TO_REMOTE)
 
-        cmd = ["git", "push", self.pr_remote, f"{head_branch}:{head_branch}"]
+        cmd = ["git", "push"]
+        if head_branch.startswith("backport-"):
+            # Overwrite potential stale backport branches with extreme prejudice.
+            cmd.append("--force-with-lease")
+        cmd += [self.pr_remote, f"{head_branch}:{head_branch}"]
         try:
             self.run_cmd(cmd)
             set_state(WORKFLOW_STATES.PUSHED_TO_REMOTE)
