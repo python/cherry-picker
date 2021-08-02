@@ -140,7 +140,7 @@ class CherryPicker:
         """
         cmd = ["git", "remote", "get-url", "upstream"]
         try:
-            subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
+            self.run_cmd(cmd)
         except subprocess.CalledProcessError:
             return "origin"
         return "upstream"
@@ -153,8 +153,7 @@ class CherryPicker:
     @property
     def username(self):
         cmd = ["git", "config", "--get", f"remote.{self.pr_remote}.url"]
-        raw_result = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        result = raw_result.decode("utf-8")
+        result = self.run_cmd(cmd)
         # implicit ssh URIs use : to separate host from user, others just use /
         username = result.replace(":", "/").split("/")[-2]
         return username
@@ -178,7 +177,7 @@ class CherryPicker:
             click.echo(f"  dry-run: {' '.join(cmd)}")
             return
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        click.echo(output.decode("utf-8"))
+        return output.decode("utf-8")
 
     def checkout_branch(self, branch_name):
         """ git checkout -b <branch_name> """
@@ -206,8 +205,12 @@ class CherryPicker:
         replace #<PRID> with GH-<PRID>
         """
         cmd = ["git", "show", "-s", "--format=%B", commit_sha]
-        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        message = output.strip().decode("utf-8")
+        try:
+            message = self.run_cmd(cmd).strip()
+        except subprocess.CalledProcessError as err:
+            click.echo(f"Error getting commit message for {commit_sha}")
+            click.echo(err.output)
+            raise CherryPickException(f"Error getting commit message for {commit_sha}")
         if self.config["fix_commit_msg"]:
             return message.replace("#", "GH-")
         else:
@@ -228,13 +231,13 @@ class CherryPicker:
         :return:
         """
         cmd = ["git", "status"]
-        self.run_cmd(cmd)
+        return self.run_cmd(cmd)
 
     def cherry_pick(self):
         """ git cherry-pick -x <commit_sha1> """
         cmd = ["git", "cherry-pick", "-x", self.commit_sha1]
         try:
-            self.run_cmd(cmd)
+            click.echo(self.run_cmd(cmd))
         except subprocess.CalledProcessError as err:
             click.echo(f"Error cherry-pick {self.commit_sha1}.")
             click.echo(err.output)
@@ -271,7 +274,7 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
         else:
             cmd = ["git", "commit", "--amend", "-m", updated_commit_message]
             try:
-                subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+                self.run_cmd(cmd)
             except subprocess.CalledProcessError as cpe:
                 click.echo("Failed to amend the commit message \u2639")
                 click.echo(cpe.output)
@@ -285,8 +288,9 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
         try:
             self.run_cmd(cmd)
             set_state(WORKFLOW_STATES.PUSHED_TO_REMOTE)
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as cpe:
             click.echo(f"Failed to push to {self.pr_remote} \u2639")
+            click.echo(cpe.output)
             set_state(WORKFLOW_STATES.PUSHING_TO_REMOTE_FAILED)
         else:
             gh_auth = os.getenv("GH_AUTH")
@@ -338,7 +342,7 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
 
     def delete_branch(self, branch):
         cmd = ["git", "branch", "-D", branch]
-        self.run_cmd(cmd)
+        return self.run_cmd(cmd)
 
     def cleanup_branch(self, branch):
         """Remove the temporary backport branch.
@@ -414,7 +418,7 @@ To abort the cherry-pick and cleanup:
         cmd = ["git", "cherry-pick", "--abort"]
         try:
             set_state(WORKFLOW_STATES.ABORTING)
-            self.run_cmd(cmd)
+            click.echo(self.run_cmd(cmd))
             set_state(WORKFLOW_STATES.ABORTED)
         except subprocess.CalledProcessError as cpe:
             click.echo(cpe.output)
@@ -466,7 +470,7 @@ To abort the cherry-pick and cleanup:
                     updated_commit_message,
                     "--allow-empty",
                 ]
-                subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+                self.run_cmd(cmd)
 
             self.push_to_remote(base, cherry_pick_branch)
 
