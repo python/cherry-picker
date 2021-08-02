@@ -14,7 +14,6 @@ python:
 - "3.8"
 - "3.7"
 - "3.6"
-- "nightly"  # currently, it's 3.10
 
 matrix:
   allow_failures:
@@ -22,7 +21,8 @@ matrix:
       dist: focal
 
 install:
-- python -m pip install --upgrade flit pip
+- python -m pip install --upgrade flit
+- python -m pip install --upgrade pip
 - flit install
 
 script:
