@@ -526,7 +526,7 @@ To abort the cherry-pick and cleanup:
                 "Valid states are: "
                 f'{", ".join(s.name for s in self.ALLOWED_STATES)}. '
                 "If this looks suspicious, raise an issue at "
-                "https://github.com/python/core-workflow/issues/new.\n"
+                "https://github.com/python/cherry-picker/issues/new.\n"
                 "As the last resort you can reset the runtime state "
                 "stored in Git config using the following command: "
                 "`git config --local --remove-section cherry-picker`"
