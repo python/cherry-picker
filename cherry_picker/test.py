@@ -831,11 +831,14 @@ def test_backport_pause_and_continue(
     ), mock.patch(
         "cherry_picker.cherry_picker.get_current_branch",
         return_value="backport-xxx-3.8",
-    ), mock.patch(
-        "cherry_picker.cherry_picker.get_author_info_from_short_sha",
-        return_value="Author Name <author@name.email>",
     ), mock.patch.object(
-        cherry_picker, "get_commit_message", return_value="commit message"
+        cherry_picker,
+        "get_updated_commit_message",
+        return_value="""[3.8] commit message
+(cherry picked from commit xxxxxxyyyyyy)
+
+
+Co-authored-by: Author Name <author@name.email>""",
     ), mock.patch.object(
         cherry_picker, "checkout_branch"
     ), mock.patch.object(
