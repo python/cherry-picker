@@ -15,6 +15,7 @@ from .cherry_picker import (
     CherryPicker,
     InvalidRepoException,
     CherryPickException,
+    BranchCheckoutException,
     normalize_commit_message,
     DEFAULT_CONFIG,
     get_sha1_from,
@@ -754,6 +755,38 @@ def test_backport_cherry_pick_crash_ignored(
     ):
         cherry_picker.backport()
 
+    assert get_state() == WORKFLOW_STATES.UNSET
+
+
+def test_backport_cherry_pick_branch_already_exists(
+    tmp_git_repo_dir, git_branch, git_add, git_commit, git_checkout
+):
+    cherry_pick_target_branches = ("3.8",)
+    pr_remote = "origin"
+    test_file = "some.file"
+    tmp_git_repo_dir.join(test_file).write("some contents")
+    git_branch(cherry_pick_target_branches[0])
+    git_branch(
+        f"{pr_remote}/{cherry_pick_target_branches[0]}", cherry_pick_target_branches[0]
+    )
+    git_add(test_file)
+    git_commit("Add a test file")
+    scm_revision = get_sha1_from("HEAD")
+
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker(
+            pr_remote, scm_revision, cherry_pick_target_branches
+        )
+
+    backport_branch_name = cherry_picker.get_cherry_pick_branch(cherry_pick_target_branches[0])
+    git_branch(backport_branch_name)
+
+    with mock.patch.object(cherry_picker, "fetch_upstream"), pytest.raises(
+        BranchCheckoutException
+    ) as exc_info:
+        cherry_picker.backport()
+
+    assert exc_info.value.branch_name == backport_branch_name
     assert get_state() == WORKFLOW_STATES.UNSET
 
 
