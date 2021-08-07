@@ -71,7 +71,9 @@ WORKFLOW_STATES = enum.Enum(
 
 
 class BranchCheckoutException(Exception):
-    pass
+    def __init__(self, branch_name):
+        self.branch_name = branch_name
+        super().__init__(f"Error checking out the branch {branch_name}.")
 
 
 class CherryPickException(Exception):
@@ -196,9 +198,7 @@ class CherryPicker:
                 f"Error checking out the branch {self.get_cherry_pick_branch(branch_name)}."
             )
             click.echo(err.output)
-            raise BranchCheckoutException(
-                f"Error checking out the branch {self.get_cherry_pick_branch(branch_name)}."
-            )
+            raise BranchCheckoutException(self.get_cherry_pick_branch(branch_name))
 
     def get_commit_message(self, commit_sha):
         """
@@ -368,7 +368,13 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
             click.echo(f"Now backporting '{self.commit_sha1}' into '{maint_branch}'")
 
             cherry_pick_branch = self.get_cherry_pick_branch(maint_branch)
-            self.checkout_branch(maint_branch)
+            try:
+                self.checkout_branch(maint_branch)
+            except BranchCheckoutException:
+                self.checkout_default_branch()
+                reset_stored_config_ref()
+                reset_state()
+                raise
             commit_message = ""
             try:
                 self.cherry_pick()
