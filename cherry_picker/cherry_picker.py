@@ -98,6 +98,7 @@ class CherryPicker:
         prefix_commit=True,
         config=DEFAULT_CONFIG,
         chosen_config_path=None,
+        auto_pr=True,
     ):
 
         self.chosen_config_path = chosen_config_path
@@ -125,6 +126,7 @@ class CherryPicker:
         self.branches = branches
         self.dry_run = dry_run
         self.push = push
+        self.auto_pr = auto_pr
         self.prefix_commit = prefix_commit
 
     def set_paused_state(self):
@@ -289,6 +291,8 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
             click.echo(f"Failed to push to {self.pr_remote} \u2639")
             set_state(WORKFLOW_STATES.PUSHING_TO_REMOTE_FAILED)
         else:
+            if not self.auto_pr:
+                return
             gh_auth = os.getenv("GH_AUTH")
             if gh_auth:
                 set_state(WORKFLOW_STATES.PR_CREATING)
@@ -570,6 +574,17 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     help="Changes won't be pushed to remote",
 )
 @click.option(
+    "--auto-pr/--no-auto-pr",
+    "auto_pr",
+    is_flag=True,
+    default=True,
+    help=(
+        "If auto PR is enabled, cherry-picker will automatically open a PR"
+        " through API if GH_AUTH env var is set, or automatically open the PR"
+        " creation page in the web browser otherwise."
+    ),
+)
+@click.option(
     "--config-path",
     "config_path",
     metavar="CONFIG-PATH",
@@ -584,7 +599,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 @click.argument("branches", nargs=-1)
 @click.pass_context
 def cherry_pick_cli(
-    ctx, dry_run, pr_remote, abort, status, push, config_path, commit_sha1, branches
+    ctx, dry_run, pr_remote, abort, status, push, auto_pr, config_path, commit_sha1, branches
 ):
     """cherry-pick COMMIT_SHA1 into target BRANCHES."""
 
@@ -599,6 +614,7 @@ def cherry_pick_cli(
             branches,
             dry_run=dry_run,
             push=push,
+            auto_pr=auto_pr,
             config=config,
             chosen_config_path=chosen_config_path,
         )
