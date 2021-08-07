@@ -262,7 +262,7 @@ To abort the cherry-pick and cleanup:
         commit_prefix = ""
         if self.prefix_commit:
             commit_prefix = f"[{get_base_branch(cherry_pick_branch)}] "
-        updated_commit_message = f"""{commit_prefix}{self.get_commit_message(self.commit_sha1)}
+        return f"""{commit_prefix}{self.get_commit_message(self.commit_sha1)}
 (cherry picked from commit {self.commit_sha1})
 
 
