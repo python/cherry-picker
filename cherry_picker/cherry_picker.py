@@ -330,7 +330,6 @@ To abort the cherry-pick and cleanup:
 $ cherry_picker --abort
 """
         )
-        set_is_already_committed()
         self.set_paused_state()
 
     def push_to_remote(self, base_branch, head_branch, commit_message=""):
@@ -474,7 +473,11 @@ $ cherry_picker --abort
         if self.initial_state != WORKFLOW_STATES.BACKPORT_PAUSED:
             raise ValueError("One can only abort a paused process.")
 
-        if not get_is_already_committed():
+        try:
+            validate_sha("CHERRY_PICK_HEAD")
+        except ValueError:
+            pass
+        else:
             cmd = ["git", "cherry-pick", "--abort"]
             try:
                 set_state(WORKFLOW_STATES.ABORTING)
@@ -487,7 +490,6 @@ $ cherry_picker --abort
         if get_current_branch().startswith("backport-"):
             self.cleanup_branch(get_current_branch())
 
-        reset_is_already_committed()
         reset_stored_previous_branch()
         reset_stored_config_ref()
         reset_state()
@@ -511,8 +513,9 @@ $ cherry_picker --abort
             ]
             self.commit_sha1 = get_full_sha_from_short(short_sha)
 
-            if get_is_already_committed():
-                commit_message = self.get_commit_message(cherry_pick_branch)
+            commits = get_commits_from_backport_branch(base)
+            if len(commits) == 1:
+                commit_message = self.amend_commit_message(cherry_pick_branch)
             else:
                 commit_message = self.get_updated_commit_message(cherry_pick_branch)
                 if self.dry_run:
@@ -549,7 +552,6 @@ $ cherry_picker --abort
             )
             set_state(WORKFLOW_STATES.CONTINUATION_FAILED)
 
-        reset_is_already_committed()
         reset_stored_previous_branch()
         reset_stored_config_ref()
         reset_state()
@@ -810,6 +812,13 @@ def get_author_info_from_short_sha(short_sha):
     return author
 
 
+def get_commits_from_backport_branch(cherry_pick_branch):
+    cmd = ["git", "log", "--format=%H", f"{cherry_pick_branch}.."]
+    output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+    commits = output.strip().decode("utf-8").splitlines()
+    return commits
+
+
 def normalize_commit_message(commit_message):
     """
     Return a tuple of title and body from the commit message
@@ -893,24 +902,6 @@ def reset_stored_config_ref():
 def reset_stored_previous_branch():
     """Remove the previous branch information from Git config."""
     wipe_cfg_vals_from_git_cfg("previous_branch")
-
-
-def get_is_already_committed():
-    """Get information from Git config about the cherry-pick being already committed."""
-    return bool(int(load_val_from_git_cfg("already_committed") or "0"))
-
-
-def set_is_already_committed():
-    """Remove information from Git config about the cherry-pick being already committed."""
-    save_cfg_vals_to_git_cfg(already_committed="1")
-
-
-def reset_is_already_committed():
-    """Remove information from Git config about the cherry-pick being already committed."""
-    try:
-        wipe_cfg_vals_from_git_cfg("already_committed")
-    except subprocess.CalledProcessError:
-        """Information was not stored in Git config."""
 
 
 def reset_state():
