@@ -93,6 +93,7 @@ class CherryPicker:
         commit_sha1,
         branches,
         *,
+        upstream_remote=None,
         dry_run=False,
         push=True,
         prefix_commit=True,
@@ -122,6 +123,7 @@ class CherryPicker:
             click.echo("Dry run requested, listing expected command sequence")
 
         self.pr_remote = pr_remote
+        self.upstream_remote = upstream_remote
         self.commit_sha1 = commit_sha1
         self.branches = branches
         self.dry_run = dry_run
@@ -138,14 +140,20 @@ class CherryPicker:
     @property
     def upstream(self):
         """Get the remote name to use for upstream branches
-        Uses "upstream" if it exists, "origin" otherwise
+
+        Uses the remote passed to `--upstream-remote`.
+        If this flag wasn't passed, it uses "upstream" if it exists or "origin" otherwise.
         """
+        if self.upstream_remote is not None:
+            return self.upstream_remote
         cmd = ["git", "remote", "get-url", "upstream"]
         try:
             self.run_cmd(cmd)
         except subprocess.CalledProcessError:
-            return "origin"
-        return "upstream"
+            self.upstream_remote = "origin"
+        else:
+            self.upstream_remote = "upstream"
+        return self.upstream_remote
 
     @property
     def sorted_branches(self):
@@ -554,6 +562,13 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     default="origin",
 )
 @click.option(
+    "--upstream-remote",
+    "upstream_remote",
+    metavar="REMOTE",
+    help="git remote to use for upstream branches",
+    default=None,
+)
+@click.option(
     "--abort",
     "abort",
     flag_value=True,
@@ -607,7 +622,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 @click.argument("branches", nargs=-1)
 @click.pass_context
 def cherry_pick_cli(
-    ctx, dry_run, pr_remote, abort, status, push, auto_pr, config_path, commit_sha1, branches
+    ctx, dry_run, pr_remote, upstream_remote, abort, status, push, auto_pr, config_path, commit_sha1, branches
 ):
     """cherry-pick COMMIT_SHA1 into target BRANCHES."""
 
@@ -620,6 +635,7 @@ def cherry_pick_cli(
             pr_remote,
             commit_sha1,
             branches,
+            upstream_remote=upstream_remote,
             dry_run=dry_run,
             push=push,
             auto_pr=auto_pr,
