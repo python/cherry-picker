@@ -636,7 +636,7 @@ def test_get_state_and_verify_fail(
         r"Valid states are: "
         r"[\w_\s]+(, [\w_\s]+)*\. "
         r"If this looks suspicious, raise an issue at "
-        r"https://github.com/python/core-workflow/issues/new\."
+        r"https://github.com/python/cherry-picker/issues/new\."
         "\n"
         r"As the last resort you can reset the runtime state "
         r"stored in Git config using the following command: "
