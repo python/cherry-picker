@@ -301,7 +301,7 @@ Install pytest: ``pip install -U pytest``
 
 ::
 
-    $ pytest test.py
+    $ pytest
 
 
 Publishing to PyPI
