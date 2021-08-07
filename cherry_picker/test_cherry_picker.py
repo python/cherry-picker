@@ -888,7 +888,9 @@ def test_backport_pause_and_continue(
 
     assert get_state() == WORKFLOW_STATES.BACKPORT_PAUSED
 
-    cherry_picker.initial_state = get_state()
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker(pr_remote, "", [])
+
     with mock.patch(
         "cherry_picker.cherry_picker.wipe_cfg_vals_from_git_cfg"
     ), mock.patch(
