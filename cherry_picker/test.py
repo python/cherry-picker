@@ -679,6 +679,18 @@ def test_push_to_remote_botflow(tmp_git_repo_dir, monkeypatch):
     assert get_state() == WORKFLOW_STATES.PR_CREATING
 
 
+def test_push_to_remote_no_auto_pr(tmp_git_repo_dir, monkeypatch):
+    monkeypatch.setenv("GH_AUTH", "True")
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker("origin", "xxx", [], auto_pr=False)
+
+    with mock.patch.object(cherry_picker, "run_cmd"), mock.patch.object(
+        cherry_picker, "create_gh_pr"
+    ):
+        cherry_picker.push_to_remote("main", "backport-branch-test")
+    assert get_state() == WORKFLOW_STATES.PUSHED_TO_REMOTE
+
+
 def test_backport_no_branch(tmp_git_repo_dir, monkeypatch):
     with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
         cherry_picker = CherryPicker("origin", "xxx", [])
