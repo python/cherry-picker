@@ -317,6 +317,22 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
                 click.echo(cpe.output)
         return updated_commit_message
 
+    def pause_after_committing(self, cherry_pick_branch):
+        click.echo(
+            f"""
+Finished cherry-pick {self.commit_sha1} into {cherry_pick_branch} \U0001F600
+--no-push option used.
+... Stopping here.
+To continue and push the changes:
+$ cherry_picker --continue
+
+To abort the cherry-pick and cleanup:
+$ cherry_picker --abort
+"""
+        )
+        set_is_already_committed()
+        self.set_paused_state()
+
     def push_to_remote(self, base_branch, head_branch, commit_message=""):
         """git push <origin> <branchname>"""
         set_state(WORKFLOW_STATES.PUSHING_TO_REMOTE)
@@ -445,19 +461,7 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
                     if not self.is_mirror():
                         self.cleanup_branch(cherry_pick_branch)
                 else:
-                    click.echo(
-                        f"""
-Finished cherry-pick {self.commit_sha1} into {cherry_pick_branch} \U0001F600
---no-push option used.
-... Stopping here.
-To continue and push the changes:
-    $ cherry_picker --continue
-
-To abort the cherry-pick and cleanup:
-    $ cherry_picker --abort
-"""
-                    )
-                    self.set_paused_state()
+                    self.pause_after_committing(cherry_pick_branch)
                     return  # to preserve the correct state
             set_state(WORKFLOW_STATES.BACKPORT_LOOP_END)
         reset_stored_previous_branch()
@@ -470,18 +474,20 @@ To abort the cherry-pick and cleanup:
         if self.initial_state != WORKFLOW_STATES.BACKPORT_PAUSED:
             raise ValueError("One can only abort a paused process.")
 
-        cmd = ["git", "cherry-pick", "--abort"]
-        try:
-            set_state(WORKFLOW_STATES.ABORTING)
-            click.echo(self.run_cmd(cmd))
-            set_state(WORKFLOW_STATES.ABORTED)
-        except subprocess.CalledProcessError as cpe:
-            click.echo(cpe.output)
-            set_state(WORKFLOW_STATES.ABORTING_FAILED)
+        if not get_is_already_committed():
+            cmd = ["git", "cherry-pick", "--abort"]
+            try:
+                set_state(WORKFLOW_STATES.ABORTING)
+                click.echo(self.run_cmd(cmd))
+                set_state(WORKFLOW_STATES.ABORTED)
+            except subprocess.CalledProcessError as cpe:
+                click.echo(cpe.output)
+                set_state(WORKFLOW_STATES.ABORTING_FAILED)
         # only delete backport branch created by cherry_picker.py
         if get_current_branch().startswith("backport-"):
             self.cleanup_branch(get_current_branch())
 
+        reset_is_already_committed()
         reset_stored_previous_branch()
         reset_stored_config_ref()
         reset_state()
@@ -504,30 +510,38 @@ To abort the cherry-pick and cleanup:
                 cherry_pick_branch.index("-") + 1 : cherry_pick_branch.index(base) - 1
             ]
             self.commit_sha1 = get_full_sha_from_short(short_sha)
-            updated_commit_message = self.get_updated_commit_message(cherry_pick_branch)
-            if self.dry_run:
-                click.echo(
-                    f"  dry-run: git commit -a -m '{updated_commit_message}' --allow-empty"
-                )
+
+            if get_is_already_committed():
+                commit_message = self.get_commit_message(cherry_pick_branch)
             else:
-                cmd = [
-                    "git",
-                    "commit",
-                    "-a",
-                    "-m",
-                    updated_commit_message,
-                    "--allow-empty",
-                ]
-                self.run_cmd(cmd)
+                commit_message = self.get_updated_commit_message(cherry_pick_branch)
+                if self.dry_run:
+                    click.echo(
+                        f"  dry-run: git commit -a -m '{commit_message}' --allow-empty"
+                    )
+                else:
+                    cmd = [
+                        "git",
+                        "commit",
+                        "-a",
+                        "-m",
+                        commit_message,
+                        "--allow-empty",
+                    ]
+                    self.run_cmd(cmd)
 
-            self.push_to_remote(base, cherry_pick_branch)
+            if self.push:
+                self.push_to_remote(base, cherry_pick_branch)
 
-            if not self.is_mirror():
-                self.cleanup_branch(cherry_pick_branch)
+                if not self.is_mirror():
+                    self.cleanup_branch(cherry_pick_branch)
 
-            click.echo("\nBackport PR:\n")
-            click.echo(updated_commit_message)
-            set_state(WORKFLOW_STATES.BACKPORTING_CONTINUATION_SUCCEED)
+                click.echo("\nBackport PR:\n")
+                click.echo(commit_message)
+                set_state(WORKFLOW_STATES.BACKPORTING_CONTINUATION_SUCCEED)
+            else:
+                self.pause_after_committing(cherry_pick_branch)
+                return  # to preserve the correct state
 
         else:
             click.echo(
@@ -535,6 +549,7 @@ To abort the cherry-pick and cleanup:
             )
             set_state(WORKFLOW_STATES.CONTINUATION_FAILED)
 
+        reset_is_already_committed()
         reset_stored_previous_branch()
         reset_stored_config_ref()
         reset_state()
@@ -878,6 +893,24 @@ def reset_stored_config_ref():
 def reset_stored_previous_branch():
     """Remove the previous branch information from Git config."""
     wipe_cfg_vals_from_git_cfg("previous_branch")
+
+
+def get_is_already_committed():
+    """Get information from Git config about the cherry-pick being already committed."""
+    return bool(int(load_val_from_git_cfg("already_committed") or "0"))
+
+
+def set_is_already_committed():
+    """Remove information from Git config about the cherry-pick being already committed."""
+    save_cfg_vals_to_git_cfg(already_committed="1")
+
+
+def reset_is_already_committed():
+    """Remove information from Git config about the cherry-pick being already committed."""
+    try:
+        wipe_cfg_vals_from_git_cfg("already_committed")
+    except subprocess.CalledProcessError:
+        """Information was not stored in Git config."""
 
 
 def reset_state():
