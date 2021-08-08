@@ -1,6 +1,6 @@
 Usage (from a cloned CPython directory) ::
 
-   cherry_picker [--pr-remote REMOTE] [--dry-run] [--config-path CONFIG-PATH] [--status] [--abort/--continue] [--push/--no-push] <commit_sha1> <branches>
+   cherry_picker [--pr-remote REMOTE] [--upstream-remote REMOTE] [--dry-run] [--config-path CONFIG-PATH] [--status] [--abort/--continue] [--push/--no-push] <commit_sha1> <branches>
 
 |pyversion status|
 |pypi status|
@@ -41,6 +41,9 @@ Requires Python 3.6.
 The cherry picking script assumes that if an ``upstream`` remote is defined, then
 it should be used as the source of upstream changes and as the base for
 cherry-pick branches. Otherwise, ``origin`` is used for that purpose.
+If this is incorrect, then the correct remote will need be specified
+using the ``--upstream-remote`` option (e.g.
+``--upstream-remote python`` to use a remote named ``python``).
 
 Verify that an ``upstream`` remote is set to the CPython repository::
 
@@ -69,7 +72,7 @@ From the cloned CPython directory:
 
 ::
 
-    (venv) $ cherry_picker [--pr-remote REMOTE] [--dry-run] [--config-path CONFIG-PATH] [--abort/--continue] [--status] [--push/--no-push] <commit_sha1> <branches>
+    (venv) $ cherry_picker [--pr-remote REMOTE] [--upstream-remote REMOTE] [--dry-run] [--config-path CONFIG-PATH] [--abort/--continue] [--status] [--push/--no-push] <commit_sha1> <branches>
 
 
 Commit sha1
@@ -90,9 +93,11 @@ Options
 
 ::
 
-    --dry-run           Dry Run Mode.  Prints out the commands, but not executed.
-    --pr-remote REMOTE  Specify the git remote to push into.  Default is 'origin'.
-    --status            Do `git status` in cpython directory.
+    --dry-run                 Dry Run Mode.  Prints out the commands, but not executed.
+    --pr-remote REMOTE        Specify the git remote to push into.  Default is 'origin'.
+    --upstream-remote REMOTE  Specify the git remote to use for upstream branches.
+                              Default is 'upstream' or 'origin' if the former doesn't exist.
+    --status                  Do `git status` in cpython directory.
 
 
 Additional options::
@@ -242,6 +247,11 @@ steps it would execute without actually executing any of them. For example::
 This will generate pull requests through a remote other than ``origin``
 (e.g. ``pr``)
 
+`--upstream-remote` option
+--------------------------
+
+This will generate branches from a remote other than ``upstream``/``origin``
+(e.g. ``python``)
 
 `--status` option
 -----------------
