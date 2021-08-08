@@ -92,6 +92,84 @@ class InvalidRepoException(Exception):
     pass
 
 
+class UserPreferences:
+    SCHEMA = {
+        "upstream_remote": str,
+        "pr_remote": str,
+        "auto_pr": bool,
+        "push": bool,
+    }
+
+    def __init__(
+        self,
+        *,
+        pr_remote="origin",
+        upstream_remote=None,
+        push=True,
+        auto_pr=True,
+    ):
+        self.pr_remote = pr_remote
+        self.upstream_remote = upstream_remote
+        self.push = push
+        self.auto_pr = auto_pr
+
+    @staticmethod
+    def get_preferences_path():
+        return os.path.join(
+            os.path.expanduser("~"), ".config", "cherry_picker", "preferences.toml"
+        )
+
+    @classmethod
+    def from_ctx(cls, ctx):
+        preferences_path = cls.get_preferences_path()
+        if not os.path.exists(preferences_path):
+            return cls()
+
+        applicable_preferences = cls._get_applicable_preferences(ctx, preferences_path)
+        kwargs = {}
+
+        for preferences in applicable_preferences:
+            for key, expected_type in cls.SCHEMA.items():
+                value = preferences.get(key)
+                if value is None:
+                    continue
+                if type(value) is not expected_type:
+                    raise ValueError(
+                        f"User preference for {key} is of invalid type ({type(value)},"
+                        f" {expected_type} was expected."
+                    )
+                kwargs[key] = value
+
+        return cls(**kwargs)
+
+    @classmethod
+    def _get_applicable_preferences(cls, ctx, preferences_path):
+        with open(preferences_path, "rb") as fp:
+            data = tomllib.load(fp)
+        applicable_preferences = []
+        continue_mode = ctx.params["abort"] is False
+
+        if "global" in data:
+            global_preferences = data["global"]
+            applicable_preferences.append(global_preferences)
+            cls._maybe_append_continue(ctx, applicable_preferences, global_preferences)
+
+        cwd = os.getcwd()
+        if "local" in data and cwd in data["local"]:
+            local_preferences = data["local"][cwd]
+            applicable_preferences.append(local_preferences[cwd])
+            cls._maybe_append_continue(ctx, applicable_preferences, local_preferences)
+
+        applicable_preferences.append(ctx.params)
+
+        return applicable_preferences
+
+    @staticmethod
+    def _maybe_append_continue(ctx, applicable_preferences, preferences):
+        if ctx.params["abort"] is False and "--continue" in preferences:
+            applicable_preferences.append(preferences["--continue"])
+
+
 class CherryPicker:
     ALLOWED_STATES = WORKFLOW_STATES.BACKPORT_PAUSED, WORKFLOW_STATES.UNSET
     """The list of states expected at the start of the app."""
@@ -715,7 +793,7 @@ CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
     "pr_remote",
     metavar="REMOTE",
     help="git remote to use for PR branches",
-    default="origin",
+    default=None,
 )
 @click.option(
     "--upstream-remote",
@@ -749,14 +827,14 @@ CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
     "--push/--no-push",
     "push",
     is_flag=True,
-    default=True,
+    default=None,
     help="Changes won't be pushed to remote",
 )
 @click.option(
     "--auto-pr/--no-auto-pr",
     "auto_pr",
     is_flag=True,
-    default=True,
+    default=None,
     help=(
         "If auto PR is enabled, cherry-picker will automatically open a PR"
         " through API if GH_AUTH env var is set, or automatically open the PR"
@@ -795,16 +873,17 @@ def cherry_pick_cli(
     click.echo("\U0001F40D \U0001F352 \u26CF")
 
     chosen_config_path, config = load_config(config_path)
+    user_preferences = UserPreferences.from_ctx(ctx)
 
     try:
         cherry_picker = CherryPicker(
-            pr_remote,
+            user_preferences.pr_remote,
             commit_sha1,
             branches,
             upstream_remote=upstream_remote,
             dry_run=dry_run,
-            push=push,
-            auto_pr=auto_pr,
+            push=user_preferences.push,
+            auto_pr=user_preferences.auto_pr,
             config=config,
             chosen_config_path=chosen_config_path,
         )
