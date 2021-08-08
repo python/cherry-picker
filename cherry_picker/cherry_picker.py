@@ -296,11 +296,31 @@ To abort the cherry-pick and cleanup:
         commit_prefix = ""
         if self.prefix_commit:
             commit_prefix = f"[{get_base_branch(cherry_pick_branch)}] "
-        return f"""{commit_prefix}{self.get_commit_message(self.commit_sha1)}
-(cherry picked from commit {self.commit_sha1})
+        updated_commit_message = f"{commit_prefix}{self.get_commit_message(self.commit_sha1)}"
+        cherry_pick_information = f"(cherry picked from commit {self.commit_sha1})\n:"
+        cmd = [
+            "git",
+            "interpret-trailers",
+            "--where",
+            "start",
+            "--trailer",
+            f"Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}",
+            "--trailer",
+            cherry_pick_information,
+        ]
+        output = subprocess.check_output(cmd, input=updated_commit_message.encode())
+        # Replace the right most-occurence of the "cherry picked from commit" string.
+        #
+        # This needs to be done because `git interpret-trailers` adds `:`
+        # to the end of the trailer.
+        before, after = output.strip().decode().rsplit(f"\n{cherry_pick_information}", 1)
+        if not before.endswith("\n"):
+            # ensure that we still have a newline between cherry pick information
+            # and commit headline
+            cherry_pick_information = f"\n{cherry_pick_information}"
+        updated_commit_message = cherry_pick_information[:-1].join((before, after))
 
-
-Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
+        return updated_commit_message
 
     def amend_commit_message(self, cherry_pick_branch):
         """ prefix the commit message with (X.Y) """
