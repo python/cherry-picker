@@ -983,18 +983,6 @@ def test_abort_cherry_pick_invalid_state(tmp_git_repo_dir):
         cherry_picker.abort_cherry_pick()
 
 
-def test_abort_cherry_pick_fail(tmp_git_repo_dir):
-    set_state(WORKFLOW_STATES.BACKPORT_PAUSED)
-
-    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
-        cherry_picker = CherryPicker("origin", "xxx", [])
-
-    with mock.patch("cherry_picker.cherry_picker.wipe_cfg_vals_from_git_cfg"):
-        cherry_picker.abort_cherry_pick()
-
-    assert get_state() == WORKFLOW_STATES.ABORTING_FAILED
-
-
 def test_abort_cherry_pick_success(
     tmp_git_repo_dir, git_branch, git_add, git_commit, git_checkout, git_cherry_pick
 ):
