@@ -1,6 +1,6 @@
 Usage (from a cloned CPython directory) ::
 
-   cherry_picker [--pr-remote REMOTE] [--dry-run] [--config-path CONFIG-PATH] [--status] [--abort/--continue] [--push/--no-push] <commit_sha1> <branches>
+   cherry_picker [--pr-remote REMOTE] [--dry-run] [--config-path CONFIG-PATH] [--status] [--abort/--continue] [--push/--no-push] [--auto-pr/--no-auto-pr] <commit_sha1> <branches>
 
 |pyversion status|
 |pypi status|
@@ -69,7 +69,7 @@ From the cloned CPython directory:
 
 ::
 
-    (venv) $ cherry_picker [--pr-remote REMOTE] [--dry-run] [--config-path CONFIG-PATH] [--abort/--continue] [--status] [--push/--no-push] <commit_sha1> <branches>
+    (venv) $ cherry_picker [--pr-remote REMOTE] [--dry-run] [--config-path CONFIG-PATH] [--abort/--continue] [--status] [--push/--no-push] [--auto-pr/--no-auto-pr] <commit_sha1> <branches>
 
 
 Commit sha1
@@ -100,6 +100,8 @@ Additional options::
     --abort        Abort current cherry-pick and clean up branch
     --continue     Continue cherry-pick, push, and clean up branch
     --no-push      Changes won't be pushed to remote
+    --no-auto-pr   PR creation page won't be automatically opened in the web browser or
+                   if GH_AUTH is set, the PR won't be automatically opened through API.
     --config-path  Path to config file
                    (`.cherry_picker.toml` from project root by default)
 
@@ -268,6 +270,14 @@ the backport, or ``--abort`` to cancel and clean up the branch.  You can also
 cherry-pick additional commits, by::
 
    $ git cherry-pick -x <commit_sha1>
+
+`--no-auto-pr` option
+---------------------
+
+PR creation page won't be automatically opened in the web browser or
+if GH_AUTH is set, the PR won't be automatically opened through API.
+This can be useful if your terminal is not capable of opening a useful web browser,
+or if you use cherry-picker with a different Git hosting than GitHub.
 
 `--config-path` option
 ----------------------
