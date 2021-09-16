@@ -59,16 +59,14 @@ jobs:
       skip-cleanup: true
       # `skip-existing: true` is required to skip uploading dists, already
       # present in PyPI instead of failing the whole process.
-      # This happenes when other CI (AppVeyor etc.) has already uploaded
+      # This happens when other CI (AppVeyor etc.) has already uploaded
       # the very same dist (usually sdist).
       skip-existing: true
       user: &pypi-user core-workflow
       password: &pypi-password
-        # Encrypt with `travis encrypt -r python/cherry-picker --org` while using travis-ci.org;
-        # change to `travis encrypt -r python/cherry-picker --api-endpoint 'https://api.travis-ci.com/'`
-        # upon switch to __free__ travis-ci.com:
         secure: >-
-          lBje6oa0VUCeG/btHJbNMc5LzH8BhjhmpP02S6PiCpXP6ZfhpP8cjaK+kEXkUWcdxmztnJYogVTE4efS9xSGO9bgJ37h8KgbOwRueUJpypZwjQiYECnJWHDqEQZlu8JXxHTrm3caAWMAFp4Volduzum/UiHAHLaaqzl9y2Sgzqkx1bm4u0r8Cb79fmUR5MxIFEXcK/TblVHvXXimWSGn5zWlRoin1xO6a0lTkYFt3XAE/uPWDwDWUl5KmLGoNd7HKJqx6TfOAbJIcu1kNBxqMYgu849Q2MwTherkKrTtXtKVuZaSX2ZrydO7dAWQpFvcb0Dd/VWAwQpbHrQJPfh0Uzxpv/t0KoNNWvrjRx2KnqUcphhOWBiv18aLaYBBUrMahyUKk1SifM/W/JdJ/RjMRNBlmzkqgpviNgIDJU26cSORFC2xQzgb+cPA8HUsqvZaJiCAQ/Zz4PZYib+3cM+Vfp1q/hAfREFnuojWEDXddPuiXqgZissHrsybQ+K4sHymioV8MW/nR1k6e3lUDjIkeuwxFANA3JIdunTWmy4Pm3ItPi2DV1hEIcLGFjO5Oa4P2QbHcQBnCgK7XdInFAjF0sf6ZmUvJcKFiVm7UODBj5zlYHaKKdOJTe3kLFP5iwinIk5CZCps34WYPvvXvFvLSamv7caxh4ySVupPn85voYQ=
+          py1y8+zVdvsSMj9DFtliu/GRsvgdRFGN4Itp2IYk1gZDhBVMWfZtLdeYcopbdK7rDSfO2pSfYqLeHZ/aQsPg+DIlaK3iseZNvn1U7OBpxdRiNMigg+0HBecK6BCRKZnchm2tw3B3cRvmRpa1Bol5L23tP7ANrFyixS0VLrlA8OoR7JBBsL8v1HE8867nxbvskROL3e1u2g1WLaWov+P2nus0ISp+cMveI8AqFQeOsDynKFLmcwCggXNhl1AMQoS6+f3QOTPRRkG68u4j3yzR+L3kBfqIfExS2pr3XMj73MpVbluxuNAgs0y62IOL3bhZW59wp9MmHyZxMz80qCHqSMNCzcAL5F0QlgT7zZiQoMiNimfiWlCCk3IEN6WmBiHo+C37GBW8sqdfqk0sY3ixsm76AL27cjHKUMUlS4hNSbhyhimzOpAtjWJN20NyzGWOI8EU+X9yVOAaV245pAN3jsW6vS4Dpng0nOFztKX/XPN3Ic9Plq1SJG9SxfCKLL/gA6IW6rSF7FAd1PaeLQTIHy/0EfjxnSj1G8b50FtOhgCBNgjF5R3P3N3+CZTAmzLkC3szPuFpQPMNT3/O58tcmMvS0w99QRJHCdbFb5ugv6sQSToW6eMF9mOuqXf0DPJzX9kbu7/bnjHGUdmTrCWHizmUVjqW5PnRfkmG1FyqOIw=
+
       on:
         tags: true
         all_branches: true
