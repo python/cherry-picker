@@ -755,7 +755,7 @@ def is_git_repo():
 
 
 def find_config(revision):
-    """Locate and return the default config for current revison."""
+    """Locate and return the default config for current revision."""
     if not is_git_repo():
         return None
 
