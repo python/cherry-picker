@@ -335,6 +335,11 @@ in the directory where ``pyproject.toml`` exists::
 Changelog
 =========
 
+2.1.0
+-----
+
+- Mix fixes: #28, #29, #31, #32, #33, #34, #36.
+
 2.0.0
 -----
 
