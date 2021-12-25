@@ -134,7 +134,7 @@ Available config options::
                    on pull-request xxxx.
                    For projects using GitHub Issues, this option can be disabled.
 
-   repo            Project's default branch name,
+   default_branch  Project's default branch name,
                    e.g "devel" for https://github.com/ansible/ansible
                    ("main" by default)
 
@@ -301,7 +301,7 @@ Install pytest: ``pip install -U pytest``
 
 ::
 
-    $ pytest test.py
+    $ pytest
 
 
 Publishing to PyPI
@@ -334,6 +334,11 @@ in the directory where ``pyproject.toml`` exists::
 
 Changelog
 =========
+
+2.1.0
+-----
+
+- Mix fixes: #28, #29, #31, #32, #33, #34, #36.
 
 2.0.0
 -----

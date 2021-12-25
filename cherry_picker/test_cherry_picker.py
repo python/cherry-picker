@@ -4,31 +4,31 @@ import subprocess
 from collections import ChainMap
 from unittest import mock
 
-import pytest
 import click
+import pytest
 
 from .cherry_picker import (
+    DEFAULT_CONFIG,
+    WORKFLOW_STATES,
+    BranchCheckoutException,
+    CherryPicker,
+    CherryPickException,
+    InvalidRepoException,
+    find_config,
+    from_git_rev_read,
+    get_author_info_from_short_sha,
     get_base_branch,
     get_current_branch,
     get_full_sha_from_short,
-    get_author_info_from_short_sha,
-    CherryPicker,
-    InvalidRepoException,
-    CherryPickException,
-    BranchCheckoutException,
-    normalize_commit_message,
-    DEFAULT_CONFIG,
     get_sha1_from,
-    find_config,
-    load_config,
-    validate_sha,
-    from_git_rev_read,
-    reset_state,
-    set_state,
     get_state,
+    load_config,
     load_val_from_git_cfg,
+    normalize_commit_message,
+    reset_state,
     reset_stored_config_ref,
-    WORKFLOW_STATES,
+    set_state,
+    validate_sha,
 )
 
 
@@ -637,7 +637,7 @@ def test_get_state_and_verify_fail(
         r"Valid states are: "
         r"[\w_\s]+(, [\w_\s]+)*\. "
         r"If this looks suspicious, raise an issue at "
-        r"https://github.com/python/core-workflow/issues/new\."
+        r"https://github.com/python/cherry-picker/issues/new\."
         "\n"
         r"As the last resort you can reset the runtime state "
         r"stored in Git config using the following command: "
@@ -678,6 +678,18 @@ def test_push_to_remote_botflow(tmp_git_repo_dir, monkeypatch):
     ):
         cherry_picker.push_to_remote("main", "backport-branch-test")
     assert get_state() == WORKFLOW_STATES.PR_CREATING
+
+
+def test_push_to_remote_no_auto_pr(tmp_git_repo_dir, monkeypatch):
+    monkeypatch.setenv("GH_AUTH", "True")
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker("origin", "xxx", [], auto_pr=False)
+
+    with mock.patch.object(cherry_picker, "run_cmd"), mock.patch.object(
+        cherry_picker, "create_gh_pr"
+    ):
+        cherry_picker.push_to_remote("main", "backport-branch-test")
+    assert get_state() == WORKFLOW_STATES.PUSHED_TO_REMOTE
 
 
 def test_backport_no_branch(tmp_git_repo_dir, monkeypatch):
@@ -966,4 +978,4 @@ def test_abort_cherry_pick_success(
 
 
 def test_cli_invoked():
-    subprocess.check_call('cherry_picker --help'.split())
+    subprocess.check_call("cherry_picker --help".split())
