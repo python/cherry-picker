@@ -4,30 +4,30 @@ import subprocess
 from collections import ChainMap
 from unittest import mock
 
-import pytest
 import click
+import pytest
 
 from .cherry_picker import (
+    DEFAULT_CONFIG,
+    WORKFLOW_STATES,
+    CherryPicker,
+    CherryPickException,
+    InvalidRepoException,
+    find_config,
+    from_git_rev_read,
+    get_author_info_from_short_sha,
     get_base_branch,
     get_current_branch,
     get_full_sha_from_short,
-    get_author_info_from_short_sha,
-    CherryPicker,
-    InvalidRepoException,
-    CherryPickException,
-    normalize_commit_message,
-    DEFAULT_CONFIG,
     get_sha1_from,
-    find_config,
-    load_config,
-    validate_sha,
-    from_git_rev_read,
-    reset_state,
-    set_state,
     get_state,
+    load_config,
     load_val_from_git_cfg,
+    normalize_commit_message,
+    reset_state,
     reset_stored_config_ref,
-    WORKFLOW_STATES,
+    set_state,
+    validate_sha,
 )
 
 
@@ -972,4 +972,4 @@ def test_abort_cherry_pick_success(
 
 
 def test_cli_invoked():
-    subprocess.check_call('cherry_picker --help'.split())
+    subprocess.check_call("cherry_picker --help".split())

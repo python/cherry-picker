@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
-#  -*- coding: utf-8 -*-
 
-import click
 import collections
 import enum
 import os
-import subprocess
-import webbrowser
 import re
+import subprocess
 import sys
+import webbrowser
+
+import click
 import requests
 import toml
-
 from gidgethub import sansio
 
 from . import __version__
@@ -175,7 +174,7 @@ class CherryPicker:
         return f"https://github.com/{self.config['team']}/{self.config['repo']}/compare/{base_branch}...{self.username}:{head_branch}?expand=1"
 
     def fetch_upstream(self):
-        """ git fetch <upstream> """
+        """git fetch <upstream>"""
         set_state(WORKFLOW_STATES.FETCHING_UPSTREAM)
         cmd = ["git", "fetch", self.upstream, "--no-tags"]
         self.run_cmd(cmd)
@@ -190,7 +189,7 @@ class CherryPicker:
         return output.decode("utf-8")
 
     def checkout_branch(self, branch_name):
-        """ git checkout -b <branch_name> """
+        """git checkout -b <branch_name>"""
         cmd = [
             "git",
             "checkout",
@@ -227,7 +226,7 @@ class CherryPicker:
             return message
 
     def checkout_default_branch(self):
-        """ git checkout default branch """
+        """git checkout default branch"""
         set_state(WORKFLOW_STATES.CHECKING_OUT_DEFAULT_BRANCH)
 
         cmd = "git", "checkout", self.config["default_branch"]
@@ -244,7 +243,7 @@ class CherryPicker:
         return self.run_cmd(cmd)
 
     def cherry_pick(self):
-        """ git cherry-pick -x <commit_sha1> """
+        """git cherry-pick -x <commit_sha1>"""
         cmd = ["git", "cherry-pick", "-x", self.commit_sha1]
         try:
             click.echo(self.run_cmd(cmd))
@@ -269,7 +268,7 @@ To abort the cherry-pick and cleanup:
 """
 
     def amend_commit_message(self, cherry_pick_branch):
-        """ prefix the commit message with (X.Y) """
+        """prefix the commit message with (X.Y)"""
 
         commit_prefix = ""
         if self.prefix_commit:
@@ -291,7 +290,7 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
         return updated_commit_message
 
     def push_to_remote(self, base_branch, head_branch, commit_message=""):
-        """ git push <origin> <branchname> """
+        """git push <origin> <branchname>"""
         set_state(WORKFLOW_STATES.PUSHING_TO_REMOTE)
 
         cmd = ["git", "push"]
@@ -622,7 +621,17 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 @click.argument("branches", nargs=-1)
 @click.pass_context
 def cherry_pick_cli(
-    ctx, dry_run, pr_remote, upstream_remote, abort, status, push, auto_pr, config_path, commit_sha1, branches
+    ctx,
+    dry_run,
+    pr_remote,
+    upstream_remote,
+    abort,
+    status,
+    push,
+    auto_pr,
+    config_path,
+    commit_sha1,
+    branches,
 ):
     """cherry-pick COMMIT_SHA1 into target BRANCHES."""
 
@@ -771,7 +780,7 @@ def is_git_repo():
 
 
 def find_config(revision):
-    """Locate and return the default config for current revison."""
+    """Locate and return the default config for current revision."""
     if not is_git_repo():
         return None
 
