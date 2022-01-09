@@ -128,6 +128,10 @@ class CherryPicker:
         self.auto_pr = auto_pr
         self.prefix_commit = prefix_commit
 
+        # This is set to the PR number when cherry-picker successfully
+        # creates a PR through API.
+        self.pr_number = None
+
     def set_paused_state(self):
         """Save paused progress state into Git config."""
         if self.chosen_config_path is not None:
@@ -331,7 +335,9 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
         url = CREATE_PR_URL_TEMPLATE.format(config=self.config)
         response = requests.post(url, headers=request_headers, json=data)
         if response.status_code == requests.codes.created:
-            click.echo(f"Backport PR created at {response.json()['html_url']}")
+            response_data = response.json()
+            click.echo(f"Backport PR created at {response_data['html_url']}")
+            self.pr_number = response_data['number']
         else:
             click.echo(response.status_code)
             click.echo(response.text)
