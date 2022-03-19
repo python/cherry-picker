@@ -30,7 +30,7 @@ Tests are to be written using `pytest <https://docs.pytest.org/en/latest/>`_.
 Setup Info
 ==========
 
-Requires Python 3.6.
+Requires Python 3.7.
 
 ::
 
