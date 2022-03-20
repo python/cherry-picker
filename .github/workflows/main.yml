@@ -17,15 +17,17 @@ jobs:
         - windows-latest
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           # fetch all branches and tags
           # ref actions/checkout#448
           fetch-depth: 0
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: .github/workflows/main.yml
       - name: Install package
         run: |
           python -m pip install .[dev]
@@ -38,11 +40,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: "3.10"
+          cache: pip
+          cache-dependency-path: .github/workflows/main.yml
       - name: Install tools
         run: |
           python -m pip install build twine
