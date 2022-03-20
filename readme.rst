@@ -4,7 +4,7 @@ Usage (from a cloned CPython directory) ::
 
 |pyversion status|
 |pypi status|
-|travis status|
+|github actions status|
 
 .. contents::
 
@@ -341,8 +341,8 @@ in the directory where ``pyproject.toml`` exists:
 .. |pypi status| image:: https://img.shields.io/pypi/v/cherry-picker.svg
    :target: https://pypi.org/project/cherry-picker/
 
-.. |travis status| image:: https://travis-ci.com/python/cherry-picker.svg?branch=main
-   :target: https://travis-ci.com/python/cherry-picker
+.. |github actions status| image:: https://github.com/python/cherry-picker/actions/workflows/main.yml/badge.svg
+   :target: https://github.com/python/cherry-picker/actions/workflows/main.yml
 
 Changelog
 =========
