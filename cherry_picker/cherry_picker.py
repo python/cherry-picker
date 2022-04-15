@@ -38,6 +38,9 @@ WORKFLOW_STATES = enum.Enum(
     CHECKING_OUT_DEFAULT_BRANCH
     CHECKED_OUT_DEFAULT_BRANCH
 
+    CHECKING_OUT_PREVIOUS_BRANCH
+    CHECKED_OUT_PREVIOUS_BRANCH
+
     PUSHING_TO_REMOTE
     PUSHED_TO_REMOTE
     PUSHING_TO_REMOTE_FAILED
@@ -138,6 +141,11 @@ class CherryPicker:
             save_cfg_vals_to_git_cfg(config_path=self.chosen_config_path)
         set_state(WORKFLOW_STATES.BACKPORT_PAUSED)
 
+    def remember_previous_branch(self):
+        """Save the current branch into Git config to be able to get back to it later."""
+        current_branch = get_current_branch()
+        save_cfg_vals_to_git_cfg(previous_branch=current_branch)
+
     @property
     def upstream(self):
         """Get the remote name to use for upstream branches
@@ -184,24 +192,29 @@ class CherryPicker:
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
         return output.decode("utf-8")
 
-    def checkout_branch(self, branch_name):
-        """git checkout -b <branch_name>"""
-        cmd = [
-            "git",
-            "checkout",
-            "-b",
-            self.get_cherry_pick_branch(branch_name),
-            f"{self.upstream}/{branch_name}",
-        ]
+    def checkout_branch(self, branch_name, *, create_branch=False):
+        """git checkout [-b] <branch_name>"""
+        if create_branch:
+            checked_out_branch = self.get_cherry_pick_branch(branch_name)
+            cmd = [
+                "git",
+                "checkout",
+                "-b",
+                checked_out_branch,
+                f"{self.upstream}/{branch_name}",
+            ]
+        else:
+            checked_out_branch = branch_name
+            cmd = ["git", "checkout", branch_name]
         try:
             self.run_cmd(cmd)
         except subprocess.CalledProcessError as err:
             click.echo(
-                f"Error checking out the branch {self.get_cherry_pick_branch(branch_name)}."
+                f"Error checking out the branch {branch_name}."
             )
             click.echo(err.output)
             raise BranchCheckoutException(
-                f"Error checking out the branch {self.get_cherry_pick_branch(branch_name)}."
+                f"Error checking out the branch {branch_name}."
             )
 
     def get_commit_message(self, commit_sha):
@@ -225,10 +238,22 @@ class CherryPicker:
         """git checkout default branch"""
         set_state(WORKFLOW_STATES.CHECKING_OUT_DEFAULT_BRANCH)
 
-        cmd = "git", "checkout", self.config["default_branch"]
-        self.run_cmd(cmd)
+        self.checkout_branch(self.config["default_branch"])
 
         set_state(WORKFLOW_STATES.CHECKED_OUT_DEFAULT_BRANCH)
+
+    def checkout_previous_branch(self):
+        """git checkout previous branch"""
+        set_state(WORKFLOW_STATES.CHECKING_OUT_PREVIOUS_BRANCH)
+
+        previous_branch = load_val_from_git_cfg("previous_branch")
+        if previous_branch is None:
+            self.checkout_default_branch()
+            return
+
+        self.checkout_branch(previous_branch)
+
+        set_state(WORKFLOW_STATES.CHECKED_OUT_PREVIOUS_BRANCH)
 
     def status(self):
         """
@@ -363,7 +388,12 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
         Switch to the default branch before that.
         """
         set_state(WORKFLOW_STATES.REMOVING_BACKPORT_BRANCH)
-        self.checkout_default_branch()
+        try:
+            self.checkout_previous_branch()
+        except BranchCheckoutException:
+            click.echo(f"branch {branch} NOT deleted.")
+            set_state(WORKFLOW_STATES.REMOVING_BACKPORT_BRANCH_FAILED)
+            return
         try:
             self.delete_branch(branch)
         except subprocess.CalledProcessError:
@@ -378,6 +408,7 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
             raise click.UsageError("At least one branch must be specified.")
         set_state(WORKFLOW_STATES.BACKPORT_STARTING)
         self.fetch_upstream()
+        self.remember_previous_branch()
 
         set_state(WORKFLOW_STATES.BACKPORT_LOOPING)
         for maint_branch in self.sorted_branches:
@@ -385,7 +416,7 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
             click.echo(f"Now backporting '{self.commit_sha1}' into '{maint_branch}'")
 
             cherry_pick_branch = self.get_cherry_pick_branch(maint_branch)
-            self.checkout_branch(maint_branch)
+            self.checkout_branch(maint_branch, create_branch=True)
             commit_message = ""
             try:
                 self.cherry_pick()
@@ -419,6 +450,7 @@ To abort the cherry-pick and cleanup:
                     self.set_paused_state()
                     return  # to preserve the correct state
             set_state(WORKFLOW_STATES.BACKPORT_LOOP_END)
+        reset_stored_previous_branch()
         reset_state()
 
     def abort_cherry_pick(self):
@@ -440,6 +472,7 @@ To abort the cherry-pick and cleanup:
         if get_current_branch().startswith("backport-"):
             self.cleanup_branch(get_current_branch())
 
+        reset_stored_previous_branch()
         reset_stored_config_ref()
         reset_state()
 
@@ -499,6 +532,7 @@ To abort the cherry-pick and cleanup:
             )
             set_state(WORKFLOW_STATES.CONTINUATION_FAILED)
 
+        reset_stored_previous_branch()
         reset_stored_config_ref()
         reset_state()
 
@@ -826,6 +860,11 @@ def reset_stored_config_ref():
         wipe_cfg_vals_from_git_cfg("config_path")
     except subprocess.CalledProcessError:
         """Config file pointer is not stored in Git config."""
+
+
+def reset_stored_previous_branch():
+    """Remove the previous branch information from Git config."""
+    wipe_cfg_vals_from_git_cfg("previous_branch")
 
 
 def reset_state():
