@@ -288,17 +288,20 @@ To abort the cherry-pick and cleanup:
     $ cherry_picker --abort
 """
 
-    def amend_commit_message(self, cherry_pick_branch):
-        """prefix the commit message with (X.Y)"""
-
+    def get_updated_commit_message(self, cherry_pick_branch):
         commit_prefix = ""
         if self.prefix_commit:
             commit_prefix = f"[{get_base_branch(cherry_pick_branch)}] "
-        updated_commit_message = f"""{commit_prefix}{self.get_commit_message(self.commit_sha1)}
+        return f"""{commit_prefix}{self.get_commit_message(self.commit_sha1)}
 (cherry picked from commit {self.commit_sha1})
 
 
 Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
+
+    def amend_commit_message(self, cherry_pick_branch):
+        """ prefix the commit message with (X.Y) """
+
+        updated_commit_message = self.get_updated_commit_message(cherry_pick_branch)
         if self.dry_run:
             click.echo(f"  dry-run: git commit --amend -m '{updated_commit_message}'")
         else:
@@ -493,16 +496,8 @@ To abort the cherry-pick and cleanup:
             short_sha = cherry_pick_branch[
                 cherry_pick_branch.index("-") + 1 : cherry_pick_branch.index(base) - 1
             ]
-            full_sha = get_full_sha_from_short(short_sha)
-            commit_message = self.get_commit_message(short_sha)
-            co_author_info = (
-                f"Co-authored-by: {get_author_info_from_short_sha(short_sha)}"
-            )
-            updated_commit_message = f"""[{base}] {commit_message}.
-(cherry picked from commit {full_sha})
-
-
-{co_author_info}"""
+            self.commit_sha1 = get_full_sha_from_short(short_sha)
+            updated_commit_message = self.get_updated_commit_message(cherry_pick_branch)
             if self.dry_run:
                 click.echo(
                     f"  dry-run: git commit -a -m '{updated_commit_message}' --allow-empty"
