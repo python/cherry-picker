@@ -113,6 +113,7 @@ def tmp_git_repo_dir(tmpdir, cd, git_init, git_commit, git_config):
     git_init()
     git_config("--local", "user.name", "Monty Python")
     git_config("--local", "user.email", "bot@python.org")
+    git_config("--local", "commit.gpgSign", "false")
     git_commit("Initial commit", "--allow-empty")
     yield repo_dir
 
