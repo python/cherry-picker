@@ -91,6 +91,14 @@ def git_commit():
 
 
 @pytest.fixture
+def git_worktree():
+    git_worktree_cmd = "git", "worktree"
+    return lambda *extra_args: (
+        subprocess.run(git_worktree_cmd + extra_args, check=True)
+    )
+
+
+@pytest.fixture
 def git_cherry_pick():
     git_cherry_pick_cmd = "git", "cherry-pick"
     return lambda *extra_args: (
@@ -106,12 +114,14 @@ def git_config():
 
 @pytest.fixture
 def tmp_git_repo_dir(tmpdir, cd, git_init, git_commit, git_config):
-    cd(tmpdir)
+    repo_dir = tmpdir.mkdir("tmp-git-repo")
+    cd(repo_dir)
     git_init()
     git_config("--local", "user.name", "Monty Python")
     git_config("--local", "user.email", "bot@python.org")
+    git_config("--local", "commit.gpgSign", "false")
     git_commit("Initial commit", "--allow-empty")
-    yield tmpdir
+    yield repo_dir
 
 
 @mock.patch("subprocess.check_output")
@@ -572,6 +582,11 @@ def test_paused_flow(tmp_git_repo_dir, git_add, git_commit):
             WORKFLOW_STATES.CHECKING_OUT_DEFAULT_BRANCH,
             WORKFLOW_STATES.CHECKED_OUT_DEFAULT_BRANCH,
         ),
+        (
+            "checkout_previous_branch",
+            WORKFLOW_STATES.CHECKING_OUT_PREVIOUS_BRANCH,
+            WORKFLOW_STATES.CHECKED_OUT_PREVIOUS_BRANCH,
+        ),
     ),
 )
 def test_start_end_states(method_name, start_state, end_state, tmp_git_repo_dir):
@@ -579,6 +594,7 @@ def test_start_end_states(method_name, start_state, end_state, tmp_git_repo_dir)
 
     with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
         cherry_picker = CherryPicker("origin", "xxx", [])
+    cherry_picker.remember_previous_branch()
     assert get_state() == WORKFLOW_STATES.UNSET
 
     def _fetch(cmd):
@@ -599,6 +615,22 @@ def test_cleanup_branch(tmp_git_repo_dir, git_checkout):
     git_checkout("-b", "some_branch")
     cherry_picker.cleanup_branch("some_branch")
     assert get_state() == WORKFLOW_STATES.REMOVED_BACKPORT_BRANCH
+    assert get_current_branch() == "main"
+
+
+def test_cleanup_branch_checkout_previous_branch(tmp_git_repo_dir, git_checkout, git_worktree):
+    assert get_state() == WORKFLOW_STATES.UNSET
+
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker("origin", "xxx", [])
+    assert get_state() == WORKFLOW_STATES.UNSET
+
+    git_checkout("-b", "previous_branch")
+    cherry_picker.remember_previous_branch()
+    git_checkout("-b", "some_branch")
+    cherry_picker.cleanup_branch("some_branch")
+    assert get_state() == WORKFLOW_STATES.REMOVED_BACKPORT_BRANCH
+    assert get_current_branch() == "previous_branch"
 
 
 def test_cleanup_branch_fail(tmp_git_repo_dir):
@@ -608,6 +640,19 @@ def test_cleanup_branch_fail(tmp_git_repo_dir):
         cherry_picker = CherryPicker("origin", "xxx", [])
     assert get_state() == WORKFLOW_STATES.UNSET
 
+    cherry_picker.cleanup_branch("some_branch")
+    assert get_state() == WORKFLOW_STATES.REMOVING_BACKPORT_BRANCH_FAILED
+
+
+def test_cleanup_branch_checkout_fail(tmp_git_repo_dir, tmpdir, git_checkout, git_worktree):
+    assert get_state() == WORKFLOW_STATES.UNSET
+
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker("origin", "xxx", [])
+    assert get_state() == WORKFLOW_STATES.UNSET
+
+    git_checkout("-b", "some_branch")
+    git_worktree("add", str(tmpdir.mkdir("test-worktree")), "main")
     cherry_picker.cleanup_branch("some_branch")
     assert get_state() == WORKFLOW_STATES.REMOVING_BACKPORT_BRANCH_FAILED
 

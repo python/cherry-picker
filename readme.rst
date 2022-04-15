@@ -1,10 +1,10 @@
 Usage (from a cloned CPython directory) ::
 
-   cherry_picker [--pr-remote REMOTE] [--upstream-remote REMOTE] [--dry-run] [--config-path CONFIG-PATH] [--status] [--abort/--continue] [--push/--no-push] <commit_sha1> <branches>
+   cherry_picker [--pr-remote REMOTE] [--upstream-remote REMOTE] [--dry-run] [--config-path CONFIG-PATH] [--status] [--abort/--continue] [--push/--no-push] [--auto-pr/--no-auto-pr] <commit_sha1> <branches>
 
 |pyversion status|
 |pypi status|
-|travis status|
+|github actions status|
 
 .. contents::
 
@@ -30,9 +30,9 @@ Tests are to be written using `pytest <https://docs.pytest.org/en/latest/>`_.
 Setup Info
 ==========
 
-Requires Python 3.6.
+Requires Python 3.7.
 
-::
+.. code-block:: console
 
     $ python3 -m venv venv
     $ source venv/bin/activate
@@ -45,14 +45,18 @@ If this is incorrect, then the correct remote will need be specified
 using the ``--upstream-remote`` option (e.g.
 ``--upstream-remote python`` to use a remote named ``python``).
 
-Verify that an ``upstream`` remote is set to the CPython repository::
+Verify that an ``upstream`` remote is set to the CPython repository:
+
+.. code-block:: console
 
     $ git remote -v
     ...
     upstream	https://github.com/python/cpython (fetch)
     upstream	https://github.com/python/cpython (push)
 
-If needed, create the ``upstream`` remote::
+If needed, create the ``upstream`` remote:
+
+.. code-block:: console
 
     $ git remote add upstream https://github.com/python/cpython.git
 
@@ -70,9 +74,9 @@ Cherry-picking 🐍🍒⛏️
 
 From the cloned CPython directory:
 
-::
+.. code-block:: console
 
-    (venv) $ cherry_picker [--pr-remote REMOTE] [--upstream-remote REMOTE] [--dry-run] [--config-path CONFIG-PATH] [--abort/--continue] [--status] [--push/--no-push] <commit_sha1> <branches>
+    (venv) $ cherry_picker [--pr-remote REMOTE] [--upstream-remote REMOTE] [--dry-run] [--config-path CONFIG-PATH] [--abort/--continue] [--status] [--push/--no-push] [--auto-pr/--no-auto-pr] <commit_sha1> <branches>
 
 
 Commit sha1
@@ -105,11 +109,15 @@ Additional options::
     --abort        Abort current cherry-pick and clean up branch
     --continue     Continue cherry-pick, push, and clean up branch
     --no-push      Changes won't be pushed to remote
+    --no-auto-pr   PR creation page won't be automatically opened in the web browser or
+                   if GH_AUTH is set, the PR won't be automatically opened through API.
     --config-path  Path to config file
                    (`.cherry_picker.toml` from project root by default)
 
 
-Configuration file example::
+Configuration file example:
+
+.. code-block:: toml
 
    team = "aio-libs"
    repo = "aiohttp"
@@ -181,14 +189,14 @@ For example, to cherry-pick ``6de2b7817f-some-commit-sha1-d064`` into
 ``3.5`` and ``3.6``, run the following command from the cloned CPython
 directory:
 
-::
+.. code-block:: console
 
     (venv) $ cherry_picker 6de2b7817f-some-commit-sha1-d064 3.5 3.6
 
 
 What this will do:
 
-::
+.. code-block:: console
 
     (venv) $ git fetch upstream
 
@@ -220,7 +228,9 @@ In case of merge conflicts or errors, the following message will be displayed::
 
 
 Passing the ``--dry-run`` option will cause the script to print out all the
-steps it would execute without actually executing any of them. For example::
+steps it would execute without actually executing any of them. For example:
+
+.. code-block:: console
 
     $ cherry_picker --dry-run --pr-remote pr 1e32a1be4a1705e34011770026cb64ada2d340b5 3.6 3.5
     Dry run requested, listing expected command sequence
@@ -275,9 +285,19 @@ Continues the current cherry-pick, commits, pushes the current branch to
 Changes won't be pushed to remote.  This allows you to test and make additional
 changes.  Once you're satisfied with local changes, use ``--continue`` to complete
 the backport, or ``--abort`` to cancel and clean up the branch.  You can also
-cherry-pick additional commits, by::
+cherry-pick additional commits, by:
+
+.. code-block:: console
 
    $ git cherry-pick -x <commit_sha1>
+
+`--no-auto-pr` option
+---------------------
+
+PR creation page won't be automatically opened in the web browser or
+if GH_AUTH is set, the PR won't be automatically opened through API.
+This can be useful if your terminal is not capable of opening a useful web browser,
+or if you use cherry-picker with a different Git hosting than GitHub.
 
 `--config-path` option
 ----------------------
@@ -309,7 +329,7 @@ Running Tests
 
 Install pytest: ``pip install -U pytest``
 
-::
+.. code-block:: console
 
     $ pytest
 
@@ -328,9 +348,11 @@ Local installation
 ==================
 
 With `flit <https://flit.readthedocs.io/en/latest/>`_ installed,
-in the directory where ``pyproject.toml`` exists::
+in the directory where ``pyproject.toml`` exists:
 
-    flit install
+.. code-block:: console
+
+    $ flit install
 
 
 .. |pyversion status| image:: https://img.shields.io/pypi/pyversions/cherry-picker.svg
@@ -339,8 +361,8 @@ in the directory where ``pyproject.toml`` exists::
 .. |pypi status| image:: https://img.shields.io/pypi/v/cherry-picker.svg
    :target: https://pypi.org/project/cherry-picker/
 
-.. |travis status| image:: https://travis-ci.com/python/cherry-picker.svg?branch=main
-   :target: https://travis-ci.com/python/cherry-picker
+.. |github actions status| image:: https://github.com/python/cherry-picker/actions/workflows/main.yml/badge.svg
+   :target: https://github.com/python/cherry-picker/actions/workflows/main.yml
 
 Changelog
 =========
