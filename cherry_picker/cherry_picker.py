@@ -321,7 +321,9 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
         if head_branch.startswith("backport-"):
             # Overwrite potential stale backport branches with extreme prejudice.
             cmd.append("--force-with-lease")
-        cmd += [self.pr_remote, f"{head_branch}:{head_branch}"]
+        cmd.append(self.pr_remote)
+        if not self.is_mirror():
+            cmd += [f"{head_branch}:{head_branch}"]
         try:
             self.run_cmd(cmd)
             set_state(WORKFLOW_STATES.PUSHED_TO_REMOTE)
@@ -570,6 +572,16 @@ To abort the cherry-pick and cleanup:
                 "`git config --local --remove-section cherry-picker`"
             )
         return state
+
+    def is_mirror(self) -> bool:
+        """Return True if the current repository was created with --mirror."""
+
+        cmd = ["git", "config", "--local", "--get", "remote.origin.mirror"]
+        try:
+            out = self.run_cmd(cmd)
+        except subprocess.CalledProcessError:
+            return False
+        return out.startswith("true")
 
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
