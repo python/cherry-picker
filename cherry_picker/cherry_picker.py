@@ -323,7 +323,7 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
             cmd.append("--force-with-lease")
         cmd.append(self.pr_remote)
         if not self.is_mirror():
-            cmd += [f"{head_branch}:{head_branch}"]
+            cmd.append(f"{head_branch}:{head_branch}")
         try:
             self.run_cmd(cmd)
             set_state(WORKFLOW_STATES.PUSHED_TO_REMOTE)
