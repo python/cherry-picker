@@ -438,7 +438,8 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
                     self.push_to_remote(
                         maint_branch, cherry_pick_branch, commit_message
                     )
-                    self.cleanup_branch(cherry_pick_branch)
+                    if not self.is_mirror():
+                        self.cleanup_branch(cherry_pick_branch)
                 else:
                     click.echo(
                         f"""
@@ -517,7 +518,8 @@ To abort the cherry-pick and cleanup:
 
             self.push_to_remote(base, cherry_pick_branch)
 
-            self.cleanup_branch(cherry_pick_branch)
+            if not self.is_mirror():
+                self.cleanup_branch(cherry_pick_branch)
 
             click.echo("\nBackport PR:\n")
             click.echo(updated_commit_message)
