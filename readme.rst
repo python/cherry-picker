@@ -323,6 +323,7 @@ Install pytest: ``pip install -U pytest``
 
     $ pytest
 
+Tests require your local version of ``git`` to be ``2.28.0+``.
 
 Publishing to PyPI
 ==================
