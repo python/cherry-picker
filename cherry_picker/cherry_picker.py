@@ -10,10 +10,14 @@ import webbrowser
 
 import click
 import requests
-import toml
 from gidgethub import sansio
 
 from . import __version__
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
 
 CREATE_PR_URL_TEMPLATE = (
     "https://api.github.com/repos/{config[team]}/{config[repo]}/pulls"
@@ -837,7 +841,7 @@ def load_config(path=None):
 
     if path is not None:
         config_text = from_git_rev_read(path)
-        d = toml.loads(config_text)
+        d = tomllib.loads(config_text)
         config = config.new_child(d)
 
     return path, config
