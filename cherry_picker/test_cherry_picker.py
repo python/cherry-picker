@@ -233,11 +233,15 @@ def test_get_cherry_pick_branch(os_path_exists, config):
     assert cp.get_cherry_pick_branch("3.6") == "backport-22a594a-3.6"
 
 
-@pytest.mark.parametrize("remote_name", ("upstream", "origin", "python"))
-def test_upstream_name(remote_name, config, tmp_git_repo_dir, git_remote):
-    upstream_remote = None
-    if remote_name == "python":
-        upstream_remote = "python"
+@pytest.mark.parametrize(
+    "remote_name,upstream_remote",
+    (
+        ("upstream", None),
+        ("origin", None),
+        ("python", "python"),
+    ),
+)
+def test_upstream_name(remote_name, upstream_remote, config, tmp_git_repo_dir, git_remote):
     git_remote("add", remote_name, "https://github.com/python/cpython.git")
     if remote_name != "origin":
         git_remote("add", "origin", "https://github.com/miss-islington/cpython.git")
