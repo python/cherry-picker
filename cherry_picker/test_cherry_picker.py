@@ -237,7 +237,9 @@ def test_get_cherry_pick_branch(os_path_exists, config):
     "remote_name,upstream_remote",
     (
         ("upstream", None),
+        ("upstream", "upstream"),
         ("origin", None),
+        ("origin", "origin"),
         ("python", "python"),
     ),
 )
