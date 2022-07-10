@@ -152,7 +152,7 @@ def test_get_base_branch_which_has_dashes(subprocess_check_output):
     [
         "backport-22a594a",  # Not enough fields
         "prefix-22a594a-2.7",  # Not the prefix we were expecting
-        "backport-22a594a-base",  # No version info in the base branch
+        "backport-22a594a-",  # No base branch
     ],
 )
 @mock.patch("subprocess.check_output")
@@ -212,20 +212,13 @@ def test_sorted_branch(os_path_exists, config, input_branches, sorted_branches):
     assert cp.sorted_branches == sorted_branches
 
 
-@pytest.mark.parametrize(
-    "input_branches",
-    [
-        (["3.1", "2.7", "3.x10", "3.6", ""]),
-        (["stable-3.1", "lts-2.7", "3.10-other", "smth3.6else", "invalid"]),
-    ],
-)
 @mock.patch("os.path.exists")
-def test_invalid_branches(os_path_exists, config, input_branches):
+def test_invalid_branch_empty_string(os_path_exists, config):
     os_path_exists.return_value = True
     cp = CherryPicker(
         "origin",
         "22a594a0047d7706537ff2ac676cdc0f1dcb329c",
-        input_branches,
+        ["3.1", "2.7", "3.10", "3.6", ""],
         config=config,
     )
     with pytest.raises(ValueError):
