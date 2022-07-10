@@ -3,6 +3,7 @@ import pathlib
 import subprocess
 from collections import ChainMap
 from unittest import mock
+import warnings
 
 import click
 import pytest
@@ -110,7 +111,16 @@ def git_config():
 def tmp_git_repo_dir(tmpdir, cd, git_init, git_commit, git_config):
     repo_dir = tmpdir.mkdir("tmp-git-repo")
     cd(repo_dir)
-    git_init()
+    try:
+        git_init()
+    except subprocess.CalledProcessError:
+        version = subprocess.run(["git", "--version"], capture_output=True)
+        split_version = version.stdout.decode("utf--8").split(".")
+        if int(split_version[0][-1]) < 1 or int(split_version[1]) < 28:
+            warnings.warn(
+                "You need git 2.28.0 or newer to run the full test suite.",
+                UserWarning,
+            )
     git_config("--local", "user.name", "Monty Python")
     git_config("--local", "user.email", "bot@python.org")
     git_config("--local", "commit.gpgSign", "false")
