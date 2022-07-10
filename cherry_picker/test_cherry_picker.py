@@ -194,6 +194,10 @@ def test_get_author_info_from_short_sha(subprocess_check_output):
             ["stable-3.1", "lts-2.7", "3.10-other", "smth3.6else"],
             ["3.10-other", "smth3.6else", "stable-3.1", "lts-2.7"],
         ),
+        (
+            ["3.7", "3.10", "2.7", "foo", "stable", "branch"],
+            ["3.10", "3.7", "2.7", "branch", "foo", "stable"],
+        ),
     ],
 )
 @mock.patch("os.path.exists")
