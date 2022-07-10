@@ -165,7 +165,7 @@ class CherryPicker:
     @property
     def sorted_branches(self):
         """Return the branches to cherry-pick to, sorted by version."""
-        return sorted(self.branches, reverse=True, key=version_from_branch)
+        return sorted(self.branches, key=version_sort_key)
 
     @property
     def username(self):
@@ -733,7 +733,7 @@ def get_base_branch(cherry_pick_branch):
 
     # Subject the parsed base_branch to the same tests as when we generated it
     # This throws a ValueError if the base_branch doesn't meet our requirements
-    version_from_branch(base_branch)
+    version_sort_key(base_branch)
 
     return base_branch
 
@@ -753,23 +753,21 @@ def validate_sha(sha):
         )
 
 
-def version_from_branch(branch):
+def version_sort_key(branch):
     """
-    return version information from a git branch name
+    return sort key based on version information from a git branch name
     """
     try:
-        return tuple(
-            map(
-                int,
-                re.match(r"^.*(?P<version>\d+(\.\d+)+).*$", branch)
-                .groupdict()["version"]
-                .split("."),
-            )
-        )
+        match = re.match(r"^.*(?P<version>\d+(\.\d+)+).*$", branch)
+        raw_version = match.groupdict()["version"].split(".")
     except AttributeError as attr_err:
-        raise ValueError(
-            f"Branch {branch} seems to not have a version in its name."
-        ) from attr_err
+        if not branch:
+            raise ValueError("Branch name is an empty string.") from attr_err
+        # Use '0' to sort regular branch names *after* version numbers
+        return (1, branch)
+    else:
+        # Use '0' to sort version numbers *before* regular branch names
+        return (0, *(-int(x) for x in raw_version))
 
 
 def get_current_branch():
