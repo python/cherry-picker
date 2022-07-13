@@ -114,7 +114,7 @@ def tmp_git_repo_dir(tmpdir, cd, git_init, git_commit, git_config):
     try:
         git_init()
     except subprocess.CalledProcessError:
-        version = subprocess.run(["git", "--version"], capture_output=True)
+        version = subprocess.run(("git", "--version"), capture_output=True)
         split_version = version.stdout.decode("utf--8").split(".")
         if int(split_version[0][-1]) < 1 or int(split_version[1]) < 28:
             warnings.warn(
