@@ -30,6 +30,8 @@ from .cherry_picker import (
     validate_sha,
 )
 
+# nosec B607 # Disabled as we need to use 'git' in the tests
+
 
 @pytest.fixture
 def config():
@@ -52,58 +54,56 @@ def cd():
 
 @pytest.fixture
 def git_init():
-    git_init_cmd = "git", "init", "--initial-branch=main", "."
-    return lambda: subprocess.run(git_init_cmd, check=True)
+    return lambda: subprocess.run(
+        ("git", "init", "--initial-branch=main", "."), check=True
+    )
 
 
 @pytest.fixture
 def git_add():
-    git_add_cmd = "git", "add"
-    return lambda *extra_args: (subprocess.run(git_add_cmd + extra_args, check=True))
+    return lambda *extra_args: (subprocess.run(("git", "add") + extra_args, check=True))
 
 
 @pytest.fixture
 def git_checkout():
-    git_checkout_cmd = "git", "checkout"
     return lambda *extra_args: (
-        subprocess.run(git_checkout_cmd + extra_args, check=True)
+        subprocess.run(("git", "checkout") + extra_args, check=True)
     )
 
 
 @pytest.fixture
 def git_branch():
-    git_branch_cmd = "git", "branch"
-    return lambda *extra_args: (subprocess.run(git_branch_cmd + extra_args, check=True))
+    return lambda *extra_args: (
+        subprocess.run(("git", "branch") + extra_args, check=True)
+    )
 
 
 @pytest.fixture
 def git_commit():
-    git_commit_cmd = "git", "commit", "-m"
     return lambda msg, *extra_args: (
-        subprocess.run(git_commit_cmd + (msg,) + extra_args, check=True)
+        subprocess.run(("git", "commit", "-m") + (msg,) + extra_args, check=True)
     )
 
 
 @pytest.fixture
 def git_worktree():
-    git_worktree_cmd = "git", "worktree"
     return lambda *extra_args: (
-        subprocess.run(git_worktree_cmd + extra_args, check=True)
+        subprocess.run(("git", "worktree") + extra_args, check=True)
     )
 
 
 @pytest.fixture
 def git_cherry_pick():
-    git_cherry_pick_cmd = "git", "cherry-pick"
     return lambda *extra_args: (
-        subprocess.run(git_cherry_pick_cmd + extra_args, check=True)
+        subprocess.run(("git", "cherry-pick") + extra_args, check=True)
     )
 
 
 @pytest.fixture
 def git_config():
-    git_config_cmd = "git", "config"
-    return lambda *extra_args: (subprocess.run(git_config_cmd + extra_args, check=True))
+    return lambda *extra_args: (
+        subprocess.run(("git", "config") + extra_args, check=True)
+    )
 
 
 @pytest.fixture
