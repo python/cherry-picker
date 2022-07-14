@@ -1,9 +1,9 @@
 import os
 import pathlib
 import subprocess
+import warnings
 from collections import ChainMap
 from unittest import mock
-import warnings
 
 import click
 import pytest
