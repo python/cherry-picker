@@ -115,8 +115,9 @@ def tmp_git_repo_dir(tmpdir, cd, git_init, git_commit, git_config):
         git_init()
     except subprocess.CalledProcessError:
         version = subprocess.run(("git", "--version"), capture_output=True)
-        split_version = version.stdout.decode("utf--8").split(".")
-        if int(split_version[0][-1]) < 1 or int(split_version[1]) < 28:
+        # the output looks like "git version 2.34.1"
+        v = version.stdout.decode("utf-8").removeprefix('git version ').split('.')
+        if (int(v[0]), int(v[1]) < (2, 28):
             warnings.warn(
                 "You need git 2.28.0 or newer to run the full test suite.",
                 UserWarning,
