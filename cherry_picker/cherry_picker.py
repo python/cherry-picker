@@ -325,7 +325,9 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
         if head_branch.startswith("backport-"):
             # Overwrite potential stale backport branches with extreme prejudice.
             cmd.append("--force-with-lease")
-        cmd += [self.pr_remote, f"{head_branch}:{head_branch}"]
+        cmd.append(self.pr_remote)
+        if not self.is_mirror():
+            cmd.append(f"{head_branch}:{head_branch}")
         try:
             self.run_cmd(cmd)
             set_state(WORKFLOW_STATES.PUSHED_TO_REMOTE)
@@ -440,7 +442,8 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
                     self.push_to_remote(
                         maint_branch, cherry_pick_branch, commit_message
                     )
-                    self.cleanup_branch(cherry_pick_branch)
+                    if not self.is_mirror():
+                        self.cleanup_branch(cherry_pick_branch)
                 else:
                     click.echo(
                         f"""
@@ -519,7 +522,8 @@ To abort the cherry-pick and cleanup:
 
             self.push_to_remote(base, cherry_pick_branch)
 
-            self.cleanup_branch(cherry_pick_branch)
+            if not self.is_mirror():
+                self.cleanup_branch(cherry_pick_branch)
 
             click.echo("\nBackport PR:\n")
             click.echo(updated_commit_message)
@@ -574,6 +578,16 @@ To abort the cherry-pick and cleanup:
                 "`git config --local --remove-section cherry-picker`"
             )
         return state
+
+    def is_mirror(self) -> bool:
+        """Return True if the current repository was created with --mirror."""
+
+        cmd = ["git", "config", "--local", "--get", "remote.origin.mirror"]
+        try:
+            out = self.run_cmd(cmd)
+        except subprocess.CalledProcessError:
+            return False
+        return out.startswith("true")
 
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
