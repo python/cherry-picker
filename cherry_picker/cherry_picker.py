@@ -10,10 +10,14 @@ import webbrowser
 
 import click
 import requests
-import toml
 from gidgethub import sansio
 
 from . import __version__
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
 
 CREATE_PR_URL_TEMPLATE = (
     "https://api.github.com/repos/{config[team]}/{config[repo]}/pulls"
@@ -296,17 +300,20 @@ To abort the cherry-pick and cleanup:
     $ cherry_picker --abort
 """
 
-    def amend_commit_message(self, cherry_pick_branch):
-        """prefix the commit message with (X.Y)"""
-
+    def get_updated_commit_message(self, cherry_pick_branch):
         commit_prefix = ""
         if self.prefix_commit:
             commit_prefix = f"[{get_base_branch(cherry_pick_branch)}] "
-        updated_commit_message = f"""{commit_prefix}{self.get_commit_message(self.commit_sha1)}
+        return f"""{commit_prefix}{self.get_commit_message(self.commit_sha1)}
 (cherry picked from commit {self.commit_sha1})
 
 
 Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
+
+    def amend_commit_message(self, cherry_pick_branch):
+        """ prefix the commit message with (X.Y) """
+
+        updated_commit_message = self.get_updated_commit_message(cherry_pick_branch)
         if self.dry_run:
             click.echo(f"  dry-run: git commit --amend -m '{updated_commit_message}'")
         else:
@@ -326,7 +333,9 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
         if head_branch.startswith("backport-"):
             # Overwrite potential stale backport branches with extreme prejudice.
             cmd.append("--force-with-lease")
-        cmd += [self.pr_remote, f"{head_branch}:{head_branch}"]
+        cmd.append(self.pr_remote)
+        if not self.is_mirror():
+            cmd.append(f"{head_branch}:{head_branch}")
         try:
             self.run_cmd(cmd)
             set_state(WORKFLOW_STATES.PUSHED_TO_REMOTE)
@@ -441,7 +450,8 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
                     self.push_to_remote(
                         maint_branch, cherry_pick_branch, commit_message
                     )
-                    self.cleanup_branch(cherry_pick_branch)
+                    if not self.is_mirror():
+                        self.cleanup_branch(cherry_pick_branch)
                 else:
                     click.echo(
                         f"""
@@ -501,16 +511,8 @@ To abort the cherry-pick and cleanup:
             short_sha = cherry_pick_branch[
                 cherry_pick_branch.index("-") + 1 : cherry_pick_branch.index(base) - 1
             ]
-            full_sha = get_full_sha_from_short(short_sha)
-            commit_message = self.get_commit_message(short_sha)
-            co_author_info = (
-                f"Co-authored-by: {get_author_info_from_short_sha(short_sha)}"
-            )
-            updated_commit_message = f"""[{base}] {commit_message}.
-(cherry picked from commit {full_sha})
-
-
-{co_author_info}"""
+            self.commit_sha1 = get_full_sha_from_short(short_sha)
+            updated_commit_message = self.get_updated_commit_message(cherry_pick_branch)
             if self.dry_run:
                 click.echo(
                     f"  dry-run: git commit -a -m '{updated_commit_message}' --allow-empty"
@@ -528,7 +530,8 @@ To abort the cherry-pick and cleanup:
 
             self.push_to_remote(base, cherry_pick_branch)
 
-            self.cleanup_branch(cherry_pick_branch)
+            if not self.is_mirror():
+                self.cleanup_branch(cherry_pick_branch)
 
             click.echo("\nBackport PR:\n")
             click.echo(updated_commit_message)
@@ -583,6 +586,16 @@ To abort the cherry-pick and cleanup:
                 "`git config --local --remove-section cherry-picker`"
             )
         return state
+
+    def is_mirror(self) -> bool:
+        """Return True if the current repository was created with --mirror."""
+
+        cmd = ["git", "config", "--local", "--get", "remote.origin.mirror"]
+        try:
+            out = self.run_cmd(cmd)
+        except subprocess.CalledProcessError:
+            return False
+        return out.startswith("true")
 
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
@@ -859,7 +872,7 @@ def load_config(path=None):
 
     if path is not None:
         config_text = from_git_rev_read(path)
-        d = toml.loads(config_text)
+        d = tomllib.loads(config_text)
         config = config.new_child(d)
 
     return path, config
