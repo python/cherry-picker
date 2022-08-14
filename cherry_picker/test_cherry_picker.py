@@ -1,6 +1,7 @@
 import os
 import pathlib
 import subprocess
+import warnings
 from collections import ChainMap
 from unittest import mock
 
@@ -111,7 +112,17 @@ def git_config():
 def tmp_git_repo_dir(tmpdir, cd, git_init, git_commit, git_config):
     repo_dir = tmpdir.mkdir("tmp-git-repo")
     cd(repo_dir)
-    git_init()
+    try:
+        git_init()
+    except subprocess.CalledProcessError:
+        version = subprocess.run(("git", "--version"), capture_output=True)
+        # the output looks like "git version 2.34.1"
+        v = version.stdout.decode("utf-8").removeprefix('git version ').split('.')
+        if (int(v[0]), int(v[1])) < (2, 28):
+            warnings.warn(
+                "You need git 2.28.0 or newer to run the full test suite.",
+                UserWarning,
+            )
     git_config("--local", "user.name", "Monty Python")
     git_config("--local", "user.email", "bot@python.org")
     git_config("--local", "commit.gpgSign", "false")
@@ -921,11 +932,14 @@ def test_backport_pause_and_continue(
     ), mock.patch(
         "cherry_picker.cherry_picker.get_current_branch",
         return_value="backport-xxx-3.8",
-    ), mock.patch(
-        "cherry_picker.cherry_picker.get_author_info_from_short_sha",
-        return_value="Author Name <author@name.email>",
     ), mock.patch.object(
-        cherry_picker, "get_commit_message", return_value="commit message"
+        cherry_picker,
+        "get_updated_commit_message",
+        return_value="""[3.8] commit message
+(cherry picked from commit xxxxxxyyyyyy)
+
+
+Co-authored-by: Author Name <author@name.email>""",
     ), mock.patch.object(
         cherry_picker, "checkout_branch"
     ), mock.patch.object(
