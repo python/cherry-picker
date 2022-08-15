@@ -2,6 +2,7 @@
 
 import collections
 import enum
+import functools
 import os
 import re
 import subprocess
@@ -153,22 +154,31 @@ class CherryPicker:
         save_cfg_vals_to_git_cfg(previous_branch=current_branch)
 
     @property
+    @functools.lru_cache(maxsize=None)
     def upstream(self):
         """Get the remote name to use for upstream branches
 
         Uses the remote passed to `--upstream-remote`.
         If this flag wasn't passed, it uses "upstream" if it exists or "origin" otherwise.
         """
-        if self.upstream_remote is not None:
-            return self.upstream_remote
         cmd = ["git", "remote", "get-url", "upstream"]
+        if self.upstream_remote is not None:
+            cmd[-1] = self.upstream_remote
+
         try:
             self.run_cmd(cmd)
         except subprocess.CalledProcessError:
-            self.upstream_remote = "origin"
-        else:
-            self.upstream_remote = "upstream"
-        return self.upstream_remote
+            if self.upstream_remote is not None:
+                raise ValueError(f"There is no remote with name {cmd[-1]!r}.")
+            cmd[-1] = "origin"
+            try:
+                self.run_cmd(cmd)
+            except subprocess.CalledProcessError:
+                raise ValueError(
+                    f"There are no remotes with name 'upstream' or 'origin'."
+                )
+
+        return cmd[-1]
 
     @property
     def sorted_branches(self):
