@@ -41,9 +41,8 @@ Requires Python 3.7.
 The cherry picking script assumes that if an ``upstream`` remote is defined, then
 it should be used as the source of upstream changes and as the base for
 cherry-pick branches. Otherwise, ``origin`` is used for that purpose.
-If this is incorrect, then the correct remote will need be specified
-using the ``--upstream-remote`` option (e.g.
-``--upstream-remote python`` to use a remote named ``python``).
+You can override this behavior with the ``--upstream-remote`` option
+(e.g. ``--upstream-remote python`` to use a remote named ``python``).
 
 Verify that an ``upstream`` remote is set to the CPython repository:
 
