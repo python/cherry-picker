@@ -2,7 +2,6 @@
 
 import collections
 import enum
-import functools
 import os
 import re
 import subprocess
@@ -138,6 +137,9 @@ class CherryPicker:
         self.auto_pr = auto_pr
         self.prefix_commit = prefix_commit
 
+        # the cached calculated value of self.upstream property
+        self._upstream = None
+
         # This is set to the PR number when cherry-picker successfully
         # creates a PR through API.
         self.pr_number = None
@@ -154,13 +156,16 @@ class CherryPicker:
         save_cfg_vals_to_git_cfg(previous_branch=current_branch)
 
     @property
-    @functools.lru_cache(maxsize=None)
     def upstream(self):
         """Get the remote name to use for upstream branches
 
         Uses the remote passed to `--upstream-remote`.
         If this flag wasn't passed, it uses "upstream" if it exists or "origin" otherwise.
         """
+        # the cached calculated value of the property
+        if self._upstream is not None:
+            return self._upstream
+
         cmd = ["git", "remote", "get-url", "upstream"]
         if self.upstream_remote is not None:
             cmd[-1] = self.upstream_remote
@@ -178,7 +183,8 @@ class CherryPicker:
                     f"There are no remotes with name 'upstream' or 'origin'."
                 )
 
-        return cmd[-1]
+        self._upstream = cmd[-1]
+        return self._upstream
 
     @property
     def sorted_branches(self):
