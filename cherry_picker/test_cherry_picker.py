@@ -271,6 +271,35 @@ def test_upstream_name(remote_name, upstream_remote, config, tmp_git_repo_dir, g
     assert cp.upstream == remote_name
 
 
+@pytest.mark.parametrize(
+    "remote_to_add,remote_name,upstream_remote",
+    (
+        (None, "upstream", None),
+        ("origin", "upstream", "upstream"),
+        (None, "origin", None),
+        ("upstream", "origin", "origin"),
+        ("origin", "python", "python"),
+        (None, "python", None),
+    ),
+)
+def test_error_on_missing_remote(remote_to_add, remote_name, upstream_remote, config, tmp_git_repo_dir, git_remote):
+    git_remote("add", "some-remote-name", "https://github.com/python/cpython.git")
+    if remote_to_add is not None:
+        git_remote("add", remote_to_add, "https://github.com/miss-islington/cpython.git")
+
+    branches = ["3.6"]
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cp = CherryPicker(
+            "origin",
+            "22a594a0047d7706537ff2ac676cdc0f1dcb329c",
+            branches,
+            config=config,
+            upstream_remote=upstream_remote,
+        )
+    with pytest.raises(ValueError):
+        cp.upstream
+
+
 def test_get_pr_url(config):
     branches = ["3.6"]
 
