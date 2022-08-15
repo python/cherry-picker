@@ -180,7 +180,7 @@ class CherryPicker:
                 self.run_cmd(cmd)
             except subprocess.CalledProcessError:
                 raise ValueError(
-                    f"There are no remotes with name 'upstream' or 'origin'."
+                    "There are no remotes with name 'upstream' or 'origin'."
                 )
 
         self._upstream = cmd[-1]
