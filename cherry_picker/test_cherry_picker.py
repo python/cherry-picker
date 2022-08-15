@@ -475,22 +475,22 @@ Co-authored-by: Elmar Ritsch <35851+elritsch@users.noreply.github.com>"""
         (
             """Fix broken `Show Source` links on documentation pages (GH-3113)
 
-Co-authored-by: Elmar Ritsch <35851+elritsch@users.noreply.github.com>""",
+Co-authored-by: PR Co-Author <another@author.com>""",
             """[3.6] Fix broken `Show Source` links on documentation pages (GH-3113)
 (cherry picked from commit b9ff498793611d1c6a9b99df464812931a1e2d69)
 
-Co-authored-by: Author Name <author@name.email>
-Co-authored-by: Elmar Ritsch <35851+elritsch@users.noreply.github.com>""",
+Co-authored-by: PR Author <author@name.email>
+Co-authored-by: PR Co-Author <another@author.com>""",
         ),
         # ensure co-author trailer is not duplicated
         (
             """Fix broken `Show Source` links on documentation pages (GH-3113)
 
-Co-authored-by: Author Name <author@name.email>""",
+Co-authored-by: PR Author <author@name.email>""",
             """[3.6] Fix broken `Show Source` links on documentation pages (GH-3113)
 (cherry picked from commit b9ff498793611d1c6a9b99df464812931a1e2d69)
 
-Co-authored-by: Author Name <author@name.email>""",
+Co-authored-by: PR Author <author@name.email>""",
         ),
         # ensure message is formatted properly when original commit is short
         (
@@ -498,7 +498,7 @@ Co-authored-by: Author Name <author@name.email>""",
             """[3.6] Fix broken `Show Source` links on documentation pages (GH-3113)
 (cherry picked from commit b9ff498793611d1c6a9b99df464812931a1e2d69)
 
-Co-authored-by: Author Name <author@name.email>""",
+Co-authored-by: PR Author <author@name.email>""",
         ),
         # ensure message is formatted properly when original commit is long
         (
@@ -514,7 +514,7 @@ In Sphinx 1.4.9, the sourcename was "index.txt".
 In Sphinx 1.5.1+, it is now "index.rst.txt".
 (cherry picked from commit b9ff498793611d1c6a9b99df464812931a1e2d69)
 
-Co-authored-by: Author Name <author@name.email>""",
+Co-authored-by: PR Author <author@name.email>""",
         ),
         # ensure message is formatted properly when original commit is long
         # and it has a co-author
@@ -525,7 +525,7 @@ The `Show Source` was broken because of a change made in sphinx 1.5.1
 In Sphinx 1.4.9, the sourcename was "index.txt".
 In Sphinx 1.5.1+, it is now "index.rst.txt".
 
-Co-authored-by: Elmar Ritsch <35851+elritsch@users.noreply.github.com>""",
+Co-authored-by: PR Co-Author <another@author.com>""",
             """[3.6] Fix broken `Show Source` links on documentation pages (GH-3113)
 
 The `Show Source` was broken because of a change made in sphinx 1.5.1
@@ -533,8 +533,8 @@ In Sphinx 1.4.9, the sourcename was "index.txt".
 In Sphinx 1.5.1+, it is now "index.rst.txt".
 (cherry picked from commit b9ff498793611d1c6a9b99df464812931a1e2d69)
 
-Co-authored-by: Author Name <author@name.email>
-Co-authored-by: Elmar Ritsch <35851+elritsch@users.noreply.github.com>""",
+Co-authored-by: PR Author <author@name.email>
+Co-authored-by: PR Co-Author <another@author.com>""",
         ),
     ),
 )
@@ -551,7 +551,7 @@ def test_get_updated_commit_message_with_trailers(commit_message, expected_commi
         cherry_picker, "get_commit_message", return_value=commit_message
     ), mock.patch(
         "cherry_picker.cherry_picker.get_author_info_from_short_sha",
-        return_value="Author Name <author@name.email>",
+        return_value="PR Author <author@name.email>",
     ):
         updated_commit_message = cherry_picker.get_updated_commit_message(cherry_pick_branch)
 
