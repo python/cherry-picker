@@ -79,7 +79,7 @@ WORKFLOW_STATES = enum.Enum(
 class BranchCheckoutException(Exception):
     def __init__(self, branch_name):
         self.branch_name = branch_name
-        super().__init__(f"Error checking out the branch {branch_name}.")
+        super().__init__(f"Error checking out the branch {branch_name!r}.")
 
 
 class CherryPickException(Exception):
@@ -216,7 +216,7 @@ class CherryPicker:
             self.run_cmd(cmd)
         except subprocess.CalledProcessError as err:
             click.echo(
-                f"Error checking out the branch {checked_out_branch}."
+                f"Error checking out the branch {checked_out_branch!r}."
             )
             click.echo(err.output)
             raise BranchCheckoutException(checked_out_branch)
