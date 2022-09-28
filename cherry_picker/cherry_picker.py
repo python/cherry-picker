@@ -157,7 +157,7 @@ class CherryPicker:
         """
         cmd = ["git", "remote", "get-url", "upstream"]
         try:
-            self.run_cmd(cmd)
+            self.run_cmd(cmd, required_real_result=True)
         except subprocess.CalledProcessError:
             return "origin"
         return "upstream"
@@ -170,7 +170,7 @@ class CherryPicker:
     @property
     def username(self):
         cmd = ["git", "config", "--get", f"remote.{self.pr_remote}.url"]
-        result = self.run_cmd(cmd)
+        result = self.run_cmd(cmd, required_real_result=True)
         # implicit ssh URIs use : to separate host from user, others just use /
         username = result.replace(":", "/").split("/")[-2]
         return username
@@ -188,9 +188,9 @@ class CherryPicker:
         self.run_cmd(cmd)
         set_state(WORKFLOW_STATES.FETCHED_UPSTREAM)
 
-    def run_cmd(self, cmd):
+    def run_cmd(self, cmd, required_real_result=False):
         assert not isinstance(cmd, str)
-        if self.dry_run:
+        if not required_real_result and self.dry_run:
             click.echo(f"  dry-run: {' '.join(cmd)}")
             return
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
@@ -228,7 +228,7 @@ class CherryPicker:
         """
         cmd = ["git", "show", "-s", "--format=%B", commit_sha]
         try:
-            message = self.run_cmd(cmd).strip()
+            message = self.run_cmd(cmd, required_real_result=True).strip()
         except subprocess.CalledProcessError as err:
             click.echo(f"Error getting commit message for {commit_sha}")
             click.echo(err.output)
@@ -584,7 +584,7 @@ To abort the cherry-pick and cleanup:
 
         cmd = ["git", "config", "--local", "--get", "remote.origin.mirror"]
         try:
-            out = self.run_cmd(cmd)
+            out = self.run_cmd(cmd, required_real_result=True)
         except subprocess.CalledProcessError:
             return False
         return out.startswith("true")
