@@ -19,6 +19,7 @@ from .cherry_picker import (
     from_git_rev_read,
     get_author_info_from_short_sha,
     get_base_branch,
+    get_commits_from_backport_branch,
     get_current_branch,
     get_full_sha_from_short,
     get_sha1_from,
@@ -106,6 +107,12 @@ def git_cherry_pick():
     return lambda *extra_args: (
         subprocess.run(git_cherry_pick_cmd + extra_args, check=True)
     )
+
+
+@pytest.fixture
+def git_reset():
+    git_reset_cmd = "git", "reset"
+    return lambda *extra_args: (subprocess.run(git_reset_cmd + extra_args, check=True))
 
 
 @pytest.fixture
@@ -952,8 +959,10 @@ def test_backport_success(
     assert get_state() == WORKFLOW_STATES.UNSET
 
 
+@pytest.mark.parametrize("already_committed", (True, False))
+@pytest.mark.parametrize("push", (True, False))
 def test_backport_pause_and_continue(
-    tmp_git_repo_dir, git_branch, git_add, git_commit, git_checkout
+    tmp_git_repo_dir, git_branch, git_add, git_commit, git_checkout, git_reset, already_committed, push
 ):
     cherry_pick_target_branches = ("3.8",)
     pr_remote = "origin"
@@ -974,16 +983,27 @@ def test_backport_pause_and_continue(
             pr_remote, scm_revision, cherry_pick_target_branches, push=False
         )
 
-    with mock.patch.object(cherry_picker, "checkout_branch"), mock.patch.object(
-        cherry_picker, "fetch_upstream"
-    ), mock.patch.object(
+    with mock.patch.object(cherry_picker, "fetch_upstream"), mock.patch.object(
         cherry_picker, "amend_commit_message", return_value="commit message"
     ):
         cherry_picker.backport()
 
+    assert len(get_commits_from_backport_branch(cherry_pick_target_branches[0])) == 1
     assert get_state() == WORKFLOW_STATES.BACKPORT_PAUSED
 
-    cherry_picker.initial_state = get_state()
+    if not already_committed:
+        git_reset("HEAD~1")
+        assert len(get_commits_from_backport_branch(cherry_pick_target_branches[0])) == 0
+
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker(pr_remote, "", [], push=push)
+
+    commit_message = f"""[{cherry_pick_target_branches[0]}] commit message
+(cherry picked from commit xxxxxxyyyyyy)
+
+
+Co-authored-by: Author Name <author@name.email>"""
+
     with mock.patch(
         "cherry_picker.cherry_picker.wipe_cfg_vals_from_git_cfg"
     ), mock.patch(
@@ -995,21 +1015,29 @@ def test_backport_pause_and_continue(
         "cherry_picker.cherry_picker.get_current_branch",
         return_value="backport-xxx-3.8",
     ), mock.patch.object(
-        cherry_picker,
-        "get_updated_commit_message",
-        return_value="""[3.8] commit message
-(cherry picked from commit xxxxxxyyyyyy)
-
-
-Co-authored-by: Author Name <author@name.email>""",
-    ), mock.patch.object(
+        cherry_picker, "amend_commit_message", return_value=commit_message
+    ) as amend_commit_message, mock.patch.object(
+        cherry_picker, "get_updated_commit_message", return_value=commit_message
+    ) as get_updated_commit_message, mock.patch.object(
         cherry_picker, "checkout_branch"
     ), mock.patch.object(
         cherry_picker, "fetch_upstream"
+    ), mock.patch.object(
+        cherry_picker, "cleanup_branch"
     ):
         cherry_picker.continue_cherry_pick()
 
-    assert get_state() == WORKFLOW_STATES.BACKPORTING_CONTINUATION_SUCCEED
+    if already_committed:
+        amend_commit_message.assert_called_once()
+        get_updated_commit_message.assert_not_called()
+    else:
+        get_updated_commit_message.assert_called_once()
+        amend_commit_message.assert_not_called()
+
+    if push:
+        assert get_state() == WORKFLOW_STATES.BACKPORTING_CONTINUATION_SUCCEED
+    else:
+        assert get_state() == WORKFLOW_STATES.BACKPORT_PAUSED
 
 
 def test_continue_cherry_pick_invalid_state(tmp_git_repo_dir):
@@ -1048,18 +1076,6 @@ def test_abort_cherry_pick_invalid_state(tmp_git_repo_dir):
 
     with pytest.raises(ValueError, match=r"^One can only abort a paused process.$"):
         cherry_picker.abort_cherry_pick()
-
-
-def test_abort_cherry_pick_fail(tmp_git_repo_dir):
-    set_state(WORKFLOW_STATES.BACKPORT_PAUSED)
-
-    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
-        cherry_picker = CherryPicker("origin", "xxx", [])
-
-    with mock.patch("cherry_picker.cherry_picker.wipe_cfg_vals_from_git_cfg"):
-        cherry_picker.abort_cherry_pick()
-
-    assert get_state() == WORKFLOW_STATES.ABORTING_FAILED
 
 
 def test_abort_cherry_pick_success(
