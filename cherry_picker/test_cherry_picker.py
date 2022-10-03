@@ -1,33 +1,34 @@
 import os
 import pathlib
 import subprocess
+import warnings
 from collections import ChainMap
 from unittest import mock
 
-import pytest
 import click
+import pytest
 
 from .cherry_picker import (
+    DEFAULT_CONFIG,
+    WORKFLOW_STATES,
+    CherryPicker,
+    CherryPickException,
+    InvalidRepoException,
+    find_config,
+    from_git_rev_read,
+    get_author_info_from_short_sha,
     get_base_branch,
     get_current_branch,
     get_full_sha_from_short,
-    get_author_info_from_short_sha,
-    CherryPicker,
-    InvalidRepoException,
-    CherryPickException,
-    normalize_commit_message,
-    DEFAULT_CONFIG,
     get_sha1_from,
-    find_config,
-    load_config,
-    validate_sha,
-    from_git_rev_read,
-    reset_state,
-    set_state,
     get_state,
+    load_config,
     load_val_from_git_cfg,
+    normalize_commit_message,
+    reset_state,
     reset_stored_config_ref,
-    WORKFLOW_STATES,
+    set_state,
+    validate_sha,
 )
 
 
@@ -52,7 +53,7 @@ def cd():
 
 @pytest.fixture
 def git_init():
-    git_init_cmd = "git", "init", "."
+    git_init_cmd = "git", "init", "--initial-branch=main", "."
     return lambda: subprocess.run(git_init_cmd, check=True)
 
 
@@ -85,6 +86,14 @@ def git_commit():
 
 
 @pytest.fixture
+def git_worktree():
+    git_worktree_cmd = "git", "worktree"
+    return lambda *extra_args: (
+        subprocess.run(git_worktree_cmd + extra_args, check=True)
+    )
+
+
+@pytest.fixture
 def git_cherry_pick():
     git_cherry_pick_cmd = "git", "cherry-pick"
     return lambda *extra_args: (
@@ -100,12 +109,24 @@ def git_config():
 
 @pytest.fixture
 def tmp_git_repo_dir(tmpdir, cd, git_init, git_commit, git_config):
-    cd(tmpdir)
-    git_init()
+    repo_dir = tmpdir.mkdir("tmp-git-repo")
+    cd(repo_dir)
+    try:
+        git_init()
+    except subprocess.CalledProcessError:
+        version = subprocess.run(("git", "--version"), capture_output=True)
+        # the output looks like "git version 2.34.1"
+        v = version.stdout.decode("utf-8").removeprefix('git version ').split('.')
+        if (int(v[0]), int(v[1])) < (2, 28):
+            warnings.warn(
+                "You need git 2.28.0 or newer to run the full test suite.",
+                UserWarning,
+            )
     git_config("--local", "user.name", "Monty Python")
     git_config("--local", "user.email", "bot@python.org")
+    git_config("--local", "commit.gpgSign", "false")
     git_commit("Initial commit", "--allow-empty")
-    yield tmpdir
+    yield repo_dir
 
 
 @mock.patch("subprocess.check_output")
@@ -143,8 +164,8 @@ def test_get_base_branch_invalid(subprocess_check_output, cherry_pick_branch):
 
 @mock.patch("subprocess.check_output")
 def test_get_current_branch(subprocess_check_output):
-    subprocess_check_output.return_value = b"master"
-    assert get_current_branch() == "master"
+    subprocess_check_output.return_value = b"main"
+    assert get_current_branch() == "main"
 
 
 @mock.patch("subprocess.check_output")
@@ -368,7 +389,7 @@ def test_load_partial_config(tmp_git_repo_dir, git_add, git_commit):
             "repo": "core-workfolow",
             "team": "python",
             "fix_commit_msg": True,
-            "default_branch": "master",
+            "default_branch": "main",
         },
     )
 
@@ -545,6 +566,11 @@ def test_paused_flow(tmp_git_repo_dir, git_add, git_commit):
             WORKFLOW_STATES.CHECKING_OUT_DEFAULT_BRANCH,
             WORKFLOW_STATES.CHECKED_OUT_DEFAULT_BRANCH,
         ),
+        (
+            "checkout_previous_branch",
+            WORKFLOW_STATES.CHECKING_OUT_PREVIOUS_BRANCH,
+            WORKFLOW_STATES.CHECKED_OUT_PREVIOUS_BRANCH,
+        ),
     ),
 )
 def test_start_end_states(method_name, start_state, end_state, tmp_git_repo_dir):
@@ -552,6 +578,7 @@ def test_start_end_states(method_name, start_state, end_state, tmp_git_repo_dir)
 
     with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
         cherry_picker = CherryPicker("origin", "xxx", [])
+    cherry_picker.remember_previous_branch()
     assert get_state() == WORKFLOW_STATES.UNSET
 
     def _fetch(cmd):
@@ -572,6 +599,22 @@ def test_cleanup_branch(tmp_git_repo_dir, git_checkout):
     git_checkout("-b", "some_branch")
     cherry_picker.cleanup_branch("some_branch")
     assert get_state() == WORKFLOW_STATES.REMOVED_BACKPORT_BRANCH
+    assert get_current_branch() == "main"
+
+
+def test_cleanup_branch_checkout_previous_branch(tmp_git_repo_dir, git_checkout, git_worktree):
+    assert get_state() == WORKFLOW_STATES.UNSET
+
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker("origin", "xxx", [])
+    assert get_state() == WORKFLOW_STATES.UNSET
+
+    git_checkout("-b", "previous_branch")
+    cherry_picker.remember_previous_branch()
+    git_checkout("-b", "some_branch")
+    cherry_picker.cleanup_branch("some_branch")
+    assert get_state() == WORKFLOW_STATES.REMOVED_BACKPORT_BRANCH
+    assert get_current_branch() == "previous_branch"
 
 
 def test_cleanup_branch_fail(tmp_git_repo_dir):
@@ -581,6 +624,19 @@ def test_cleanup_branch_fail(tmp_git_repo_dir):
         cherry_picker = CherryPicker("origin", "xxx", [])
     assert get_state() == WORKFLOW_STATES.UNSET
 
+    cherry_picker.cleanup_branch("some_branch")
+    assert get_state() == WORKFLOW_STATES.REMOVING_BACKPORT_BRANCH_FAILED
+
+
+def test_cleanup_branch_checkout_fail(tmp_git_repo_dir, tmpdir, git_checkout, git_worktree):
+    assert get_state() == WORKFLOW_STATES.UNSET
+
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker("origin", "xxx", [])
+    assert get_state() == WORKFLOW_STATES.UNSET
+
+    git_checkout("-b", "some_branch")
+    git_worktree("add", str(tmpdir.mkdir("test-worktree")), "main")
     cherry_picker.cleanup_branch("some_branch")
     assert get_state() == WORKFLOW_STATES.REMOVING_BACKPORT_BRANCH_FAILED
 
@@ -608,7 +664,9 @@ def test_cherry_pick(tmp_git_repo_dir, git_add, git_branch, git_commit, git_chec
     cherry_picker.cherry_pick()
 
 
-def test_cherry_pick_fail(tmp_git_repo_dir,):
+def test_cherry_pick_fail(
+    tmp_git_repo_dir,
+):
     with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
         cherry_picker = CherryPicker("origin", "xxx", [])
 
@@ -616,7 +674,9 @@ def test_cherry_pick_fail(tmp_git_repo_dir,):
         cherry_picker.cherry_pick()
 
 
-def test_get_state_and_verify_fail(tmp_git_repo_dir,):
+def test_get_state_and_verify_fail(
+    tmp_git_repo_dir,
+):
     class tested_state:
         name = "invalid_state"
 
@@ -632,7 +692,7 @@ def test_get_state_and_verify_fail(tmp_git_repo_dir,):
         r"Valid states are: "
         r"[\w_\s]+(, [\w_\s]+)*\. "
         r"If this looks suspicious, raise an issue at "
-        r"https://github.com/python/core-workflow/issues/new\."
+        r"https://github.com/python/cherry-picker/issues/new\."
         "\n"
         r"As the last resort you can reset the runtime state "
         r"stored in Git config using the following command: "
@@ -648,7 +708,7 @@ def test_push_to_remote_fail(tmp_git_repo_dir):
     with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
         cherry_picker = CherryPicker("origin", "xxx", [])
 
-    cherry_picker.push_to_remote("master", "backport-branch-test")
+    cherry_picker.push_to_remote("main", "backport-branch-test")
     assert get_state() == WORKFLOW_STATES.PUSHING_TO_REMOTE_FAILED
 
 
@@ -659,7 +719,7 @@ def test_push_to_remote_interactive(tmp_git_repo_dir):
     with mock.patch.object(cherry_picker, "run_cmd"), mock.patch.object(
         cherry_picker, "open_pr"
     ), mock.patch.object(cherry_picker, "get_pr_url", return_value="https://pr_url"):
-        cherry_picker.push_to_remote("master", "backport-branch-test")
+        cherry_picker.push_to_remote("main", "backport-branch-test")
     assert get_state() == WORKFLOW_STATES.PR_OPENING
 
 
@@ -671,8 +731,20 @@ def test_push_to_remote_botflow(tmp_git_repo_dir, monkeypatch):
     with mock.patch.object(cherry_picker, "run_cmd"), mock.patch.object(
         cherry_picker, "create_gh_pr"
     ):
-        cherry_picker.push_to_remote("master", "backport-branch-test")
+        cherry_picker.push_to_remote("main", "backport-branch-test")
     assert get_state() == WORKFLOW_STATES.PR_CREATING
+
+
+def test_push_to_remote_no_auto_pr(tmp_git_repo_dir, monkeypatch):
+    monkeypatch.setenv("GH_AUTH", "True")
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker("origin", "xxx", [], auto_pr=False)
+
+    with mock.patch.object(cherry_picker, "run_cmd"), mock.patch.object(
+        cherry_picker, "create_gh_pr"
+    ):
+        cherry_picker.push_to_remote("main", "backport-branch-test")
+    assert get_state() == WORKFLOW_STATES.PUSHED_TO_REMOTE
 
 
 def test_backport_no_branch(tmp_git_repo_dir, monkeypatch):
@@ -827,11 +899,14 @@ def test_backport_pause_and_continue(
     ), mock.patch(
         "cherry_picker.cherry_picker.get_current_branch",
         return_value="backport-xxx-3.8",
-    ), mock.patch(
-        "cherry_picker.cherry_picker.get_author_info_from_short_sha",
-        return_value="Author Name <author@name.email>",
     ), mock.patch.object(
-        cherry_picker, "get_commit_message", return_value="commit message"
+        cherry_picker,
+        "get_updated_commit_message",
+        return_value="""[3.8] commit message
+(cherry picked from commit xxxxxxyyyyyy)
+
+
+Co-authored-by: Author Name <author@name.email>""",
     ), mock.patch.object(
         cherry_picker, "checkout_branch"
     ), mock.patch.object(
@@ -926,3 +1001,7 @@ def test_abort_cherry_pick_success(
         cherry_picker.abort_cherry_pick()
 
     assert get_state() == WORKFLOW_STATES.REMOVED_BACKPORT_BRANCH
+
+
+def test_cli_invoked():
+    subprocess.check_call("cherry_picker --help".split())

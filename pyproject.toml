@@ -9,14 +9,14 @@ author-email = "mariatta@python.org"
 maintainer = "Python Core Developers"
 maintainer-email = "core-workflow@python.org"
 home-page = "https://github.com/python/cherry_picker"
-requires = ["click>=6.0", "gidgethub", "requests", "toml"]
+requires = ["click>=6.0", "gidgethub", "requests", "tomli>=1.1.0;python_version<'3.11'"]
 description-file = "readme.rst"
-classifiers = ["Programming Language :: Python :: 3.6", "Intended Audience :: Developers", "License :: OSI Approved :: Apache Software License"]
-requires-python = ">=3.6"
+classifiers = ["Programming Language :: Python :: 3.7", "Intended Audience :: Developers", "License :: OSI Approved :: Apache Software License"]
+requires-python = ">=3.7"
 
 
 [tool.flit.scripts]
-cherry_picker = "cherry_picker:cherry_pick_cli"
+cherry_picker = "cherry_picker.cherry_picker:cherry_pick_cli"
 
 [tool.flit.metadata.requires-extra]
-dev = ["pytest"]
+dev = ["pytest", "pytest-cov"]
