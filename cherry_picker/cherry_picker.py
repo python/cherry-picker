@@ -99,6 +99,7 @@ class CherryPicker:
         commit_sha1,
         branches,
         *,
+        upstream_remote=None,
         dry_run=False,
         push=True,
         prefix_commit=True,
@@ -128,12 +129,16 @@ class CherryPicker:
             click.echo("Dry run requested, listing expected command sequence")
 
         self.pr_remote = pr_remote
+        self.upstream_remote = upstream_remote
         self.commit_sha1 = commit_sha1
         self.branches = branches
         self.dry_run = dry_run
         self.push = push
         self.auto_pr = auto_pr
         self.prefix_commit = prefix_commit
+
+        # the cached calculated value of self.upstream property
+        self._upstream = None
 
         # This is set to the PR number when cherry-picker successfully
         # creates a PR through API.
@@ -153,14 +158,33 @@ class CherryPicker:
     @property
     def upstream(self):
         """Get the remote name to use for upstream branches
-        Uses "upstream" if it exists, "origin" otherwise
+
+        Uses the remote passed to `--upstream-remote`.
+        If this flag wasn't passed, it uses "upstream" if it exists or "origin" otherwise.
         """
+        # the cached calculated value of the property
+        if self._upstream is not None:
+            return self._upstream
+
         cmd = ["git", "remote", "get-url", "upstream"]
+        if self.upstream_remote is not None:
+            cmd[-1] = self.upstream_remote
+
         try:
             self.run_cmd(cmd)
         except subprocess.CalledProcessError:
-            return "origin"
-        return "upstream"
+            if self.upstream_remote is not None:
+                raise ValueError(f"There is no remote with name {cmd[-1]!r}.")
+            cmd[-1] = "origin"
+            try:
+                self.run_cmd(cmd)
+            except subprocess.CalledProcessError:
+                raise ValueError(
+                    "There are no remotes with name 'upstream' or 'origin'."
+                )
+
+        self._upstream = cmd[-1]
+        return self._upstream
 
     @property
     def sorted_branches(self):
@@ -606,6 +630,13 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     default="origin",
 )
 @click.option(
+    "--upstream-remote",
+    "upstream_remote",
+    metavar="REMOTE",
+    help="git remote to use for upstream branches",
+    default=None,
+)
+@click.option(
     "--abort",
     "abort",
     flag_value=True,
@@ -662,6 +693,7 @@ def cherry_pick_cli(
     ctx,
     dry_run,
     pr_remote,
+    upstream_remote,
     abort,
     status,
     push,
@@ -681,6 +713,7 @@ def cherry_pick_cli(
             pr_remote,
             commit_sha1,
             branches,
+            upstream_remote=upstream_remote,
             dry_run=dry_run,
             push=push,
             auto_pr=auto_pr,
