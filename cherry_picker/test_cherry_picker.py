@@ -741,7 +741,7 @@ def test_start_end_states(method_name, start_state, end_state, tmp_git_repo_dir)
     cherry_picker.remember_previous_branch()
     assert get_state() == WORKFLOW_STATES.UNSET
 
-    def _fetch(cmd):
+    def _fetch(cmd, *args, **kwargs):
         assert get_state() == start_state
 
     with mock.patch.object(cherry_picker, "run_cmd", _fetch):
