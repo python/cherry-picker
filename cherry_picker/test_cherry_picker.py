@@ -1053,12 +1053,13 @@ def test_backport_success(
 @pytest.mark.parametrize("already_committed", (True, False))
 @pytest.mark.parametrize("push", (True, False))
 def test_backport_pause_and_continue(
-    tmp_git_repo_dir, git_branch, git_add, git_commit, git_checkout, git_reset, already_committed, push
+    tmp_git_repo_dir, git_branch, git_add, git_commit, git_checkout, git_reset, git_remote, already_committed, push
 ):
     cherry_pick_target_branches = ("3.8",)
     pr_remote = "origin"
     test_file = "some.file"
     tmp_git_repo_dir.join(test_file).write("some contents")
+    git_remote("add", pr_remote, "https://github.com/python/cpython.git")
     git_branch(cherry_pick_target_branches[0])
     git_branch(
         f"{pr_remote}/{cherry_pick_target_branches[0]}", cherry_pick_target_branches[0]
