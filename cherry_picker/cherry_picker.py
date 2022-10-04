@@ -755,7 +755,13 @@ def validate_sha(sha):
 
 def version_sort_key(branch):
     """
-    return sort key based on version information from a git branch name
+    Get sort key based on version information from the given git branch name.
+
+    This function can be used as a sort key in list.sort()/sorted().
+
+    Branches with version information come first and are sorted from latest
+    to oldest version.
+    Branches without version information come second and are sorted alphabetically.
     """
     try:
         match = re.match(r"^.*(?P<version>\d+(\.\d+)+).*$", branch)
