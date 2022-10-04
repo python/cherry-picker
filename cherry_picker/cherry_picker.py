@@ -317,14 +317,48 @@ To abort the cherry-pick and cleanup:
 """
 
     def get_updated_commit_message(self, cherry_pick_branch):
+        """
+        Get updated commit message for the cherry-picked commit.
+        """
+        # Get the original commit message and prefix it with the branch name
+        # if that's enabled.
         commit_prefix = ""
         if self.prefix_commit:
             commit_prefix = f"[{get_base_branch(cherry_pick_branch)}] "
-        return f"""{commit_prefix}{self.get_commit_message(self.commit_sha1)}
-(cherry picked from commit {self.commit_sha1})
+        updated_commit_message = f"{commit_prefix}{self.get_commit_message(self.commit_sha1)}"
 
+        # Add '(cherry picked from commit ...)' to the message
+        # and add new Co-authored-by trailer if necessary.
+        cherry_pick_information = f"(cherry picked from commit {self.commit_sha1})\n:"
+        # Here, we're inserting new Co-authored-by trailer and we *somewhat*
+        # abuse interpret-trailers by also adding cherry_pick_information which
+        # is not an actual trailer.
+        # `--where start` makes it so we insert new trailers *before* the existing
+        # trailers so cherry-pick information gets added before any of the trailers
+        # which prevents us from breaking the trailers.
+        cmd = [
+            "git",
+            "interpret-trailers",
+            "--where",
+            "start",
+            "--trailer",
+            f"Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}",
+            "--trailer",
+            cherry_pick_information,
+        ]
+        output = subprocess.check_output(cmd, input=updated_commit_message.encode())
+        # Replace the right most-occurence of the "cherry picked from commit" string.
+        #
+        # This needs to be done because `git interpret-trailers` required us to add `:`
+        # to `cherry_pick_information` when we don't actually want it.
+        before, after = output.strip().decode().rsplit(f"\n{cherry_pick_information}", 1)
+        if not before.endswith("\n"):
+            # ensure that we still have a newline between cherry pick information
+            # and commit headline
+            cherry_pick_information = f"\n{cherry_pick_information}"
+        updated_commit_message = cherry_pick_information[:-1].join((before, after))
 
-Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
+        return updated_commit_message
 
     def amend_commit_message(self, cherry_pick_branch):
         """ prefix the commit message with (X.Y) """
