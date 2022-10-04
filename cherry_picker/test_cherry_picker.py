@@ -11,6 +11,7 @@ import pytest
 from .cherry_picker import (
     DEFAULT_CONFIG,
     WORKFLOW_STATES,
+    BranchCheckoutException,
     CherryPicker,
     CherryPickException,
     InvalidRepoException,
@@ -18,6 +19,7 @@ from .cherry_picker import (
     from_git_rev_read,
     get_author_info_from_short_sha,
     get_base_branch,
+    get_commits_from_backport_branch,
     get_current_branch,
     get_full_sha_from_short,
     get_sha1_from,
@@ -55,6 +57,12 @@ def cd():
 def git_init():
     git_init_cmd = "git", "init", "--initial-branch=main", "."
     return lambda: subprocess.run(git_init_cmd, check=True)
+
+
+@pytest.fixture
+def git_remote():
+    git_remote_cmd = "git", "remote"
+    return lambda *extra_args: (subprocess.run(git_remote_cmd + extra_args, check=True))
 
 
 @pytest.fixture
@@ -99,6 +107,12 @@ def git_cherry_pick():
     return lambda *extra_args: (
         subprocess.run(git_cherry_pick_cmd + extra_args, check=True)
     )
+
+
+@pytest.fixture
+def git_reset():
+    git_reset_cmd = "git", "reset"
+    return lambda *extra_args: (subprocess.run(git_reset_cmd + extra_args, check=True))
 
 
 @pytest.fixture
@@ -236,6 +250,62 @@ def test_get_cherry_pick_branch(os_path_exists, config):
         "origin", "22a594a0047d7706537ff2ac676cdc0f1dcb329c", branches, config=config
     )
     assert cp.get_cherry_pick_branch("3.6") == "backport-22a594a-3.6"
+
+
+@pytest.mark.parametrize(
+    "remote_name,upstream_remote",
+    (
+        ("upstream", None),
+        ("upstream", "upstream"),
+        ("origin", None),
+        ("origin", "origin"),
+        ("python", "python"),
+    ),
+)
+def test_upstream_name(remote_name, upstream_remote, config, tmp_git_repo_dir, git_remote):
+    git_remote("add", remote_name, "https://github.com/python/cpython.git")
+    if remote_name != "origin":
+        git_remote("add", "origin", "https://github.com/miss-islington/cpython.git")
+
+    branches = ["3.6"]
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cp = CherryPicker(
+            "origin",
+            "22a594a0047d7706537ff2ac676cdc0f1dcb329c",
+            branches,
+            config=config,
+            upstream_remote=upstream_remote,
+        )
+    assert cp.upstream == remote_name
+
+
+@pytest.mark.parametrize(
+    "remote_to_add,remote_name,upstream_remote",
+    (
+        (None, "upstream", None),
+        ("origin", "upstream", "upstream"),
+        (None, "origin", None),
+        ("upstream", "origin", "origin"),
+        ("origin", "python", "python"),
+        (None, "python", None),
+    ),
+)
+def test_error_on_missing_remote(remote_to_add, remote_name, upstream_remote, config, tmp_git_repo_dir, git_remote):
+    git_remote("add", "some-remote-name", "https://github.com/python/cpython.git")
+    if remote_to_add is not None:
+        git_remote("add", remote_to_add, "https://github.com/miss-islington/cpython.git")
+
+    branches = ["3.6"]
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cp = CherryPicker(
+            "origin",
+            "22a594a0047d7706537ff2ac676cdc0f1dcb329c",
+            branches,
+            config=config,
+            upstream_remote=upstream_remote,
+        )
+    with pytest.raises(ValueError):
+        cp.upstream
 
 
 def test_get_pr_url(config):
@@ -466,6 +536,96 @@ Co-authored-by: Elmar Ritsch <35851+elritsch@users.noreply.github.com>"""
 
 Co-authored-by: Elmar Ritsch <35851+elritsch@users.noreply.github.com>"""
     )
+
+
+@pytest.mark.parametrize(
+    "commit_message,expected_commit_message",
+    (
+        # ensure existing co-author is retained
+        (
+            """Fix broken `Show Source` links on documentation pages (GH-3113)
+
+Co-authored-by: PR Co-Author <another@author.com>""",
+            """[3.6] Fix broken `Show Source` links on documentation pages (GH-3113)
+(cherry picked from commit b9ff498793611d1c6a9b99df464812931a1e2d69)
+
+Co-authored-by: PR Author <author@name.email>
+Co-authored-by: PR Co-Author <another@author.com>""",
+        ),
+        # ensure co-author trailer is not duplicated
+        (
+            """Fix broken `Show Source` links on documentation pages (GH-3113)
+
+Co-authored-by: PR Author <author@name.email>""",
+            """[3.6] Fix broken `Show Source` links on documentation pages (GH-3113)
+(cherry picked from commit b9ff498793611d1c6a9b99df464812931a1e2d69)
+
+Co-authored-by: PR Author <author@name.email>""",
+        ),
+        # ensure message is formatted properly when original commit is short
+        (
+            "Fix broken `Show Source` links on documentation pages (GH-3113)",
+            """[3.6] Fix broken `Show Source` links on documentation pages (GH-3113)
+(cherry picked from commit b9ff498793611d1c6a9b99df464812931a1e2d69)
+
+Co-authored-by: PR Author <author@name.email>""",
+        ),
+        # ensure message is formatted properly when original commit is long
+        (
+            """Fix broken `Show Source` links on documentation pages (GH-3113)
+
+The `Show Source` was broken because of a change made in sphinx 1.5.1
+In Sphinx 1.4.9, the sourcename was "index.txt".
+In Sphinx 1.5.1+, it is now "index.rst.txt".""",
+            """[3.6] Fix broken `Show Source` links on documentation pages (GH-3113)
+
+The `Show Source` was broken because of a change made in sphinx 1.5.1
+In Sphinx 1.4.9, the sourcename was "index.txt".
+In Sphinx 1.5.1+, it is now "index.rst.txt".
+(cherry picked from commit b9ff498793611d1c6a9b99df464812931a1e2d69)
+
+Co-authored-by: PR Author <author@name.email>""",
+        ),
+        # ensure message is formatted properly when original commit is long
+        # and it has a co-author
+        (
+            """Fix broken `Show Source` links on documentation pages (GH-3113)
+
+The `Show Source` was broken because of a change made in sphinx 1.5.1
+In Sphinx 1.4.9, the sourcename was "index.txt".
+In Sphinx 1.5.1+, it is now "index.rst.txt".
+
+Co-authored-by: PR Co-Author <another@author.com>""",
+            """[3.6] Fix broken `Show Source` links on documentation pages (GH-3113)
+
+The `Show Source` was broken because of a change made in sphinx 1.5.1
+In Sphinx 1.4.9, the sourcename was "index.txt".
+In Sphinx 1.5.1+, it is now "index.rst.txt".
+(cherry picked from commit b9ff498793611d1c6a9b99df464812931a1e2d69)
+
+Co-authored-by: PR Author <author@name.email>
+Co-authored-by: PR Co-Author <another@author.com>""",
+        ),
+    ),
+)
+def test_get_updated_commit_message_with_trailers(commit_message, expected_commit_message):
+    cherry_pick_branch = "backport-22a594a-3.6"
+    commit = "b9ff498793611d1c6a9b99df464812931a1e2d69"
+
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker("origin", commit, [])
+
+    with mock.patch(
+        "cherry_picker.cherry_picker.validate_sha", return_value=True
+    ), mock.patch.object(
+        cherry_picker, "get_commit_message", return_value=commit_message
+    ), mock.patch(
+        "cherry_picker.cherry_picker.get_author_info_from_short_sha",
+        return_value="PR Author <author@name.email>",
+    ):
+        updated_commit_message = cherry_picker.get_updated_commit_message(cherry_pick_branch)
+
+    assert updated_commit_message == expected_commit_message
 
 
 @pytest.mark.parametrize(
@@ -825,6 +985,38 @@ def test_backport_cherry_pick_crash_ignored(
     assert get_state() == WORKFLOW_STATES.UNSET
 
 
+def test_backport_cherry_pick_branch_already_exists(
+    tmp_git_repo_dir, git_branch, git_add, git_commit, git_checkout
+):
+    cherry_pick_target_branches = ("3.8",)
+    pr_remote = "origin"
+    test_file = "some.file"
+    tmp_git_repo_dir.join(test_file).write("some contents")
+    git_branch(cherry_pick_target_branches[0])
+    git_branch(
+        f"{pr_remote}/{cherry_pick_target_branches[0]}", cherry_pick_target_branches[0]
+    )
+    git_add(test_file)
+    git_commit("Add a test file")
+    scm_revision = get_sha1_from("HEAD")
+
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker(
+            pr_remote, scm_revision, cherry_pick_target_branches
+        )
+
+    backport_branch_name = cherry_picker.get_cherry_pick_branch(cherry_pick_target_branches[0])
+    git_branch(backport_branch_name)
+
+    with mock.patch.object(cherry_picker, "fetch_upstream"), pytest.raises(
+        BranchCheckoutException
+    ) as exc_info:
+        cherry_picker.backport()
+
+    assert exc_info.value.branch_name == backport_branch_name
+    assert get_state() == WORKFLOW_STATES.UNSET
+
+
 def test_backport_success(
     tmp_git_repo_dir, git_branch, git_add, git_commit, git_checkout
 ):
@@ -857,8 +1049,10 @@ def test_backport_success(
     assert get_state() == WORKFLOW_STATES.UNSET
 
 
+@pytest.mark.parametrize("already_committed", (True, False))
+@pytest.mark.parametrize("push", (True, False))
 def test_backport_pause_and_continue(
-    tmp_git_repo_dir, git_branch, git_add, git_commit, git_checkout
+    tmp_git_repo_dir, git_branch, git_add, git_commit, git_checkout, git_reset, already_committed, push
 ):
     cherry_pick_target_branches = ("3.8",)
     pr_remote = "origin"
@@ -879,16 +1073,27 @@ def test_backport_pause_and_continue(
             pr_remote, scm_revision, cherry_pick_target_branches, push=False
         )
 
-    with mock.patch.object(cherry_picker, "checkout_branch"), mock.patch.object(
-        cherry_picker, "fetch_upstream"
-    ), mock.patch.object(
+    with mock.patch.object(cherry_picker, "fetch_upstream"), mock.patch.object(
         cherry_picker, "amend_commit_message", return_value="commit message"
     ):
         cherry_picker.backport()
 
+    assert len(get_commits_from_backport_branch(cherry_pick_target_branches[0])) == 1
     assert get_state() == WORKFLOW_STATES.BACKPORT_PAUSED
 
-    cherry_picker.initial_state = get_state()
+    if not already_committed:
+        git_reset("HEAD~1")
+        assert len(get_commits_from_backport_branch(cherry_pick_target_branches[0])) == 0
+
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker(pr_remote, "", [], push=push)
+
+    commit_message = f"""[{cherry_pick_target_branches[0]}] commit message
+(cherry picked from commit xxxxxxyyyyyy)
+
+
+Co-authored-by: Author Name <author@name.email>"""
+
     with mock.patch(
         "cherry_picker.cherry_picker.wipe_cfg_vals_from_git_cfg"
     ), mock.patch(
@@ -900,21 +1105,29 @@ def test_backport_pause_and_continue(
         "cherry_picker.cherry_picker.get_current_branch",
         return_value="backport-xxx-3.8",
     ), mock.patch.object(
-        cherry_picker,
-        "get_updated_commit_message",
-        return_value="""[3.8] commit message
-(cherry picked from commit xxxxxxyyyyyy)
-
-
-Co-authored-by: Author Name <author@name.email>""",
-    ), mock.patch.object(
+        cherry_picker, "amend_commit_message", return_value=commit_message
+    ) as amend_commit_message, mock.patch.object(
+        cherry_picker, "get_updated_commit_message", return_value=commit_message
+    ) as get_updated_commit_message, mock.patch.object(
         cherry_picker, "checkout_branch"
     ), mock.patch.object(
         cherry_picker, "fetch_upstream"
+    ), mock.patch.object(
+        cherry_picker, "cleanup_branch"
     ):
         cherry_picker.continue_cherry_pick()
 
-    assert get_state() == WORKFLOW_STATES.BACKPORTING_CONTINUATION_SUCCEED
+    if already_committed:
+        amend_commit_message.assert_called_once()
+        get_updated_commit_message.assert_not_called()
+    else:
+        get_updated_commit_message.assert_called_once()
+        amend_commit_message.assert_not_called()
+
+    if push:
+        assert get_state() == WORKFLOW_STATES.BACKPORTING_CONTINUATION_SUCCEED
+    else:
+        assert get_state() == WORKFLOW_STATES.BACKPORT_PAUSED
 
 
 def test_continue_cherry_pick_invalid_state(tmp_git_repo_dir):
@@ -953,18 +1166,6 @@ def test_abort_cherry_pick_invalid_state(tmp_git_repo_dir):
 
     with pytest.raises(ValueError, match=r"^One can only abort a paused process.$"):
         cherry_picker.abort_cherry_pick()
-
-
-def test_abort_cherry_pick_fail(tmp_git_repo_dir):
-    set_state(WORKFLOW_STATES.BACKPORT_PAUSED)
-
-    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
-        cherry_picker = CherryPicker("origin", "xxx", [])
-
-    with mock.patch("cherry_picker.cherry_picker.wipe_cfg_vals_from_git_cfg"):
-        cherry_picker.abort_cherry_pick()
-
-    assert get_state() == WORKFLOW_STATES.ABORTING_FAILED
 
 
 def test_abort_cherry_pick_success(

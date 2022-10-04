@@ -77,7 +77,9 @@ WORKFLOW_STATES = enum.Enum(
 
 
 class BranchCheckoutException(Exception):
-    pass
+    def __init__(self, branch_name):
+        self.branch_name = branch_name
+        super().__init__(f"Error checking out the branch {branch_name!r}.")
 
 
 class CherryPickException(Exception):
@@ -99,6 +101,7 @@ class CherryPicker:
         commit_sha1,
         branches,
         *,
+        upstream_remote=None,
         dry_run=False,
         push=True,
         prefix_commit=True,
@@ -128,12 +131,16 @@ class CherryPicker:
             click.echo("Dry run requested, listing expected command sequence")
 
         self.pr_remote = pr_remote
+        self.upstream_remote = upstream_remote
         self.commit_sha1 = commit_sha1
         self.branches = branches
         self.dry_run = dry_run
         self.push = push
         self.auto_pr = auto_pr
         self.prefix_commit = prefix_commit
+
+        # the cached calculated value of self.upstream property
+        self._upstream = None
 
         # This is set to the PR number when cherry-picker successfully
         # creates a PR through API.
@@ -153,14 +160,33 @@ class CherryPicker:
     @property
     def upstream(self):
         """Get the remote name to use for upstream branches
-        Uses "upstream" if it exists, "origin" otherwise
+
+        Uses the remote passed to `--upstream-remote`.
+        If this flag wasn't passed, it uses "upstream" if it exists or "origin" otherwise.
         """
+        # the cached calculated value of the property
+        if self._upstream is not None:
+            return self._upstream
+
         cmd = ["git", "remote", "get-url", "upstream"]
+        if self.upstream_remote is not None:
+            cmd[-1] = self.upstream_remote
+
         try:
             self.run_cmd(cmd)
         except subprocess.CalledProcessError:
-            return "origin"
-        return "upstream"
+            if self.upstream_remote is not None:
+                raise ValueError(f"There is no remote with name {cmd[-1]!r}.")
+            cmd[-1] = "origin"
+            try:
+                self.run_cmd(cmd)
+            except subprocess.CalledProcessError:
+                raise ValueError(
+                    "There are no remotes with name 'upstream' or 'origin'."
+                )
+
+        self._upstream = cmd[-1]
+        return self._upstream
 
     @property
     def sorted_branches(self):
@@ -214,12 +240,10 @@ class CherryPicker:
             self.run_cmd(cmd)
         except subprocess.CalledProcessError as err:
             click.echo(
-                f"Error checking out the branch {branch_name}."
+                f"Error checking out the branch {checked_out_branch!r}."
             )
             click.echo(err.output)
-            raise BranchCheckoutException(
-                f"Error checking out the branch {branch_name}."
-            )
+            raise BranchCheckoutException(checked_out_branch)
 
     def get_commit_message(self, commit_sha):
         """
@@ -293,14 +317,48 @@ To abort the cherry-pick and cleanup:
 """
 
     def get_updated_commit_message(self, cherry_pick_branch):
+        """
+        Get updated commit message for the cherry-picked commit.
+        """
+        # Get the original commit message and prefix it with the branch name
+        # if that's enabled.
         commit_prefix = ""
         if self.prefix_commit:
             commit_prefix = f"[{get_base_branch(cherry_pick_branch)}] "
-        return f"""{commit_prefix}{self.get_commit_message(self.commit_sha1)}
-(cherry picked from commit {self.commit_sha1})
+        updated_commit_message = f"{commit_prefix}{self.get_commit_message(self.commit_sha1)}"
 
+        # Add '(cherry picked from commit ...)' to the message
+        # and add new Co-authored-by trailer if necessary.
+        cherry_pick_information = f"(cherry picked from commit {self.commit_sha1})\n:"
+        # Here, we're inserting new Co-authored-by trailer and we *somewhat*
+        # abuse interpret-trailers by also adding cherry_pick_information which
+        # is not an actual trailer.
+        # `--where start` makes it so we insert new trailers *before* the existing
+        # trailers so cherry-pick information gets added before any of the trailers
+        # which prevents us from breaking the trailers.
+        cmd = [
+            "git",
+            "interpret-trailers",
+            "--where",
+            "start",
+            "--trailer",
+            f"Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}",
+            "--trailer",
+            cherry_pick_information,
+        ]
+        output = subprocess.check_output(cmd, input=updated_commit_message.encode())
+        # Replace the right most-occurence of the "cherry picked from commit" string.
+        #
+        # This needs to be done because `git interpret-trailers` required us to add `:`
+        # to `cherry_pick_information` when we don't actually want it.
+        before, after = output.strip().decode().rsplit(f"\n{cherry_pick_information}", 1)
+        if not before.endswith("\n"):
+            # ensure that we still have a newline between cherry pick information
+            # and commit headline
+            cherry_pick_information = f"\n{cherry_pick_information}"
+        updated_commit_message = cherry_pick_information[:-1].join((before, after))
 
-Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
+        return updated_commit_message
 
     def amend_commit_message(self, cherry_pick_branch):
         """ prefix the commit message with (X.Y) """
@@ -316,6 +374,21 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
                 click.echo("Failed to amend the commit message \u2639")
                 click.echo(cpe.output)
         return updated_commit_message
+
+    def pause_after_committing(self, cherry_pick_branch):
+        click.echo(
+            f"""
+Finished cherry-pick {self.commit_sha1} into {cherry_pick_branch} \U0001F600
+--no-push option used.
+... Stopping here.
+To continue and push the changes:
+$ cherry_picker --continue
+
+To abort the cherry-pick and cleanup:
+$ cherry_picker --abort
+"""
+        )
+        self.set_paused_state()
 
     def push_to_remote(self, base_branch, head_branch, commit_message=""):
         """git push <origin> <branchname>"""
@@ -425,7 +498,13 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
             click.echo(f"Now backporting '{self.commit_sha1}' into '{maint_branch}'")
 
             cherry_pick_branch = self.get_cherry_pick_branch(maint_branch)
-            self.checkout_branch(maint_branch, create_branch=True)
+            try:
+                self.checkout_branch(maint_branch, create_branch=True)
+            except BranchCheckoutException:
+                self.checkout_default_branch()
+                reset_stored_config_ref()
+                reset_state()
+                raise
             commit_message = ""
             try:
                 self.cherry_pick()
@@ -445,19 +524,7 @@ Co-authored-by: {get_author_info_from_short_sha(self.commit_sha1)}"""
                     if not self.is_mirror():
                         self.cleanup_branch(cherry_pick_branch)
                 else:
-                    click.echo(
-                        f"""
-Finished cherry-pick {self.commit_sha1} into {cherry_pick_branch} \U0001F600
---no-push option used.
-... Stopping here.
-To continue and push the changes:
-    $ cherry_picker --continue
-
-To abort the cherry-pick and cleanup:
-    $ cherry_picker --abort
-"""
-                    )
-                    self.set_paused_state()
+                    self.pause_after_committing(cherry_pick_branch)
                     return  # to preserve the correct state
             set_state(WORKFLOW_STATES.BACKPORT_LOOP_END)
         reset_stored_previous_branch()
@@ -470,14 +537,19 @@ To abort the cherry-pick and cleanup:
         if self.initial_state != WORKFLOW_STATES.BACKPORT_PAUSED:
             raise ValueError("One can only abort a paused process.")
 
-        cmd = ["git", "cherry-pick", "--abort"]
         try:
-            set_state(WORKFLOW_STATES.ABORTING)
-            click.echo(self.run_cmd(cmd))
-            set_state(WORKFLOW_STATES.ABORTED)
-        except subprocess.CalledProcessError as cpe:
-            click.echo(cpe.output)
-            set_state(WORKFLOW_STATES.ABORTING_FAILED)
+            validate_sha("CHERRY_PICK_HEAD")
+        except ValueError:
+            pass
+        else:
+            cmd = ["git", "cherry-pick", "--abort"]
+            try:
+                set_state(WORKFLOW_STATES.ABORTING)
+                click.echo(self.run_cmd(cmd))
+                set_state(WORKFLOW_STATES.ABORTED)
+            except subprocess.CalledProcessError as cpe:
+                click.echo(cpe.output)
+                set_state(WORKFLOW_STATES.ABORTING_FAILED)
         # only delete backport branch created by cherry_picker.py
         if get_current_branch().startswith("backport-"):
             self.cleanup_branch(get_current_branch())
@@ -504,30 +576,39 @@ To abort the cherry-pick and cleanup:
                 cherry_pick_branch.index("-") + 1 : cherry_pick_branch.index(base) - 1
             ]
             self.commit_sha1 = get_full_sha_from_short(short_sha)
-            updated_commit_message = self.get_updated_commit_message(cherry_pick_branch)
-            if self.dry_run:
-                click.echo(
-                    f"  dry-run: git commit -a -m '{updated_commit_message}' --allow-empty"
-                )
+
+            commits = get_commits_from_backport_branch(base)
+            if len(commits) == 1:
+                commit_message = self.amend_commit_message(cherry_pick_branch)
             else:
-                cmd = [
-                    "git",
-                    "commit",
-                    "-a",
-                    "-m",
-                    updated_commit_message,
-                    "--allow-empty",
-                ]
-                self.run_cmd(cmd)
+                commit_message = self.get_updated_commit_message(cherry_pick_branch)
+                if self.dry_run:
+                    click.echo(
+                        f"  dry-run: git commit -a -m '{commit_message}' --allow-empty"
+                    )
+                else:
+                    cmd = [
+                        "git",
+                        "commit",
+                        "-a",
+                        "-m",
+                        commit_message,
+                        "--allow-empty",
+                    ]
+                    self.run_cmd(cmd)
 
-            self.push_to_remote(base, cherry_pick_branch)
+            if self.push:
+                self.push_to_remote(base, cherry_pick_branch)
 
-            if not self.is_mirror():
-                self.cleanup_branch(cherry_pick_branch)
+                if not self.is_mirror():
+                    self.cleanup_branch(cherry_pick_branch)
 
-            click.echo("\nBackport PR:\n")
-            click.echo(updated_commit_message)
-            set_state(WORKFLOW_STATES.BACKPORTING_CONTINUATION_SUCCEED)
+                click.echo("\nBackport PR:\n")
+                click.echo(commit_message)
+                set_state(WORKFLOW_STATES.BACKPORTING_CONTINUATION_SUCCEED)
+            else:
+                self.pause_after_committing(cherry_pick_branch)
+                return  # to preserve the correct state
 
         else:
             click.echo(
@@ -606,6 +687,13 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     default="origin",
 )
 @click.option(
+    "--upstream-remote",
+    "upstream_remote",
+    metavar="REMOTE",
+    help="git remote to use for upstream branches",
+    default=None,
+)
+@click.option(
     "--abort",
     "abort",
     flag_value=True,
@@ -662,6 +750,7 @@ def cherry_pick_cli(
     ctx,
     dry_run,
     pr_remote,
+    upstream_remote,
     abort,
     status,
     push,
@@ -681,6 +770,7 @@ def cherry_pick_cli(
             pr_remote,
             commit_sha1,
             branches,
+            upstream_remote=upstream_remote,
             dry_run=dry_run,
             push=push,
             auto_pr=auto_pr,
@@ -793,6 +883,13 @@ def get_author_info_from_short_sha(short_sha):
     output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
     author = output.strip().decode("utf-8")
     return author
+
+
+def get_commits_from_backport_branch(cherry_pick_branch):
+    cmd = ["git", "log", "--format=%H", f"{cherry_pick_branch}.."]
+    output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+    commits = output.strip().decode("utf-8").splitlines()
+    return commits
 
 
 def normalize_commit_message(commit_message):
