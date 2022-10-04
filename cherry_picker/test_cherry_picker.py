@@ -986,12 +986,13 @@ def test_backport_cherry_pick_crash_ignored(
 
 
 def test_backport_cherry_pick_branch_already_exists(
-    tmp_git_repo_dir, git_branch, git_add, git_commit, git_checkout
+    tmp_git_repo_dir, git_branch, git_add, git_commit, git_checkout, git_remote
 ):
     cherry_pick_target_branches = ("3.8",)
     pr_remote = "origin"
     test_file = "some.file"
     tmp_git_repo_dir.join(test_file).write("some contents")
+    git_remote("add", pr_remote, "https://github.com/python/cpython.git")
     git_branch(cherry_pick_target_branches[0])
     git_branch(
         f"{pr_remote}/{cherry_pick_target_branches[0]}", cherry_pick_target_branches[0]
