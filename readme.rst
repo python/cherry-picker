@@ -123,32 +123,37 @@ Configuration file example:
    check_sha = "f382b5ffc445e45a110734f5396728da7914aeb6"
    fix_commit_msg = false
    default_branch = "devel"
+   require_version_in_branch_name = false
 
 
 Available config options::
 
-   team            github organization or individual nick,
-                   e.g "aio-libs" for https://github.com/aio-libs/aiohttp
-                   ("python" by default)
+   team                            github organization or individual nick,
+                                   e.g "aio-libs" for https://github.com/aio-libs/aiohttp
+                                   ("python" by default)
 
-   repo            github project name,
-                   e.g "aiohttp" for https://github.com/aio-libs/aiohttp
-                   ("cpython" by default)
+   repo                            github project name,
+                                   e.g "aiohttp" for https://github.com/aio-libs/aiohttp
+                                   ("cpython" by default)
 
-   check_sha       A long hash for any commit from the repo,
-                   e.g. a sha1 hash from the very first initial commit
-                   ("7f777ed95a19224294949e1b4ce56bbffcb1fe9f" by default)
+   check_sha                       A long hash for any commit from the repo,
+                                   e.g. a sha1 hash from the very first initial commit
+                                   ("7f777ed95a19224294949e1b4ce56bbffcb1fe9f" by default)
 
-   fix_commit_msg  Replace # with GH- in cherry-picked commit message.
-                   It is the default behavior for CPython because of external
-                   Roundup bug tracker (https://bugs.python.org) behavior:
-                   #xxxx should point on issue xxxx but GH-xxxx points
-                   on pull-request xxxx.
-                   For projects using GitHub Issues, this option can be disabled.
+   fix_commit_msg                  Replace # with GH- in cherry-picked commit message.
+                                   It is the default behavior for CPython because of external
+                                   Roundup bug tracker (https://bugs.python.org) behavior:
+                                   #xxxx should point on issue xxxx but GH-xxxx points
+                                   on pull-request xxxx.
+                                   For projects using GitHub Issues, this option can be disabled.
 
-   default_branch  Project's default branch name,
-                   e.g "devel" for https://github.com/ansible/ansible
-                   ("main" by default)
+   default_branch                  Project's default branch name,
+                                   e.g "devel" for https://github.com/ansible/ansible
+                                   ("main" by default)
+
+   require_version_in_branch_name  Allow backporting to branches whose names don't contain
+                                   something that resembles a version number
+                                   (i.e. at least two dot-separated numbers).
 
 
 To customize the tool for used by other project:
