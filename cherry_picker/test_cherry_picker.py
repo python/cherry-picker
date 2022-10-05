@@ -144,20 +144,20 @@ def tmp_git_repo_dir(tmpdir, cd, git_init, git_commit, git_config):
 
 
 @mock.patch("subprocess.check_output")
-def test_get_base_branch(subprocess_check_output):
+def test_get_base_branch(subprocess_check_output, config):
     # The format of cherry-pick branches we create are::
     #     backport-{SHA}-{base_branch}
     subprocess_check_output.return_value = b"22a594a0047d7706537ff2ac676cdc0f1dcb329c"
     cherry_pick_branch = "backport-22a594a-2.7"
-    result = get_base_branch(cherry_pick_branch)
+    result = get_base_branch(cherry_pick_branch, config=config)
     assert result == "2.7"
 
 
 @mock.patch("subprocess.check_output")
-def test_get_base_branch_which_has_dashes(subprocess_check_output):
+def test_get_base_branch_which_has_dashes(subprocess_check_output, config):
     subprocess_check_output.return_value = b"22a594a0047d7706537ff2ac676cdc0f1dcb329c"
     cherry_pick_branch = "backport-22a594a-baseprefix-2.7-basesuffix"
-    result = get_base_branch(cherry_pick_branch)
+    result = get_base_branch(cherry_pick_branch, config=config)
     assert result == "baseprefix-2.7-basesuffix"
 
 
@@ -170,10 +170,10 @@ def test_get_base_branch_which_has_dashes(subprocess_check_output):
     ],
 )
 @mock.patch("subprocess.check_output")
-def test_get_base_branch_invalid(subprocess_check_output, cherry_pick_branch):
+def test_get_base_branch_invalid(subprocess_check_output, cherry_pick_branch, config):
     subprocess_check_output.return_value = b"22a594a0047d7706537ff2ac676cdc0f1dcb329c"
     with pytest.raises(ValueError):
-        get_base_branch(cherry_pick_branch)
+        get_base_branch(cherry_pick_branch, config=config)
 
 
 @mock.patch("subprocess.check_output")
@@ -201,22 +201,31 @@ def test_get_author_info_from_short_sha(subprocess_check_output):
 
 
 @pytest.mark.parametrize(
-    "input_branches,sorted_branches",
+    "input_branches,sorted_branches,allow_versionless",
     [
-        (["3.1", "2.7", "3.10", "3.6"], ["3.10", "3.6", "3.1", "2.7"]),
+        (["3.1", "2.7", "3.10", "3.6"], ["3.10", "3.6", "3.1", "2.7"], False),
         (
             ["stable-3.1", "lts-2.7", "3.10-other", "smth3.6else"],
             ["3.10-other", "smth3.6else", "stable-3.1", "lts-2.7"],
+            False,
+        ),
+        (["3.1", "2.7", "3.10", "3.6"], ["3.10", "3.6", "3.1", "2.7"], True),
+        (
+            ["stable-3.1", "lts-2.7", "3.10-other", "smth3.6else"],
+            ["3.10-other", "smth3.6else", "stable-3.1", "lts-2.7"],
+            True,
         ),
         (
             ["3.7", "3.10", "2.7", "foo", "stable", "branch"],
             ["3.10", "3.7", "2.7", "branch", "foo", "stable"],
+            True,
         ),
     ],
 )
 @mock.patch("os.path.exists")
-def test_sorted_branch(os_path_exists, config, input_branches, sorted_branches):
+def test_sorted_branch(os_path_exists, config, input_branches, sorted_branches, allow_versionless):
     os_path_exists.return_value = True
+    config["allow_branches_without_version"] = allow_versionless
     cp = CherryPicker(
         "origin",
         "22a594a0047d7706537ff2ac676cdc0f1dcb329c",
@@ -229,10 +238,32 @@ def test_sorted_branch(os_path_exists, config, input_branches, sorted_branches):
 @mock.patch("os.path.exists")
 def test_invalid_branch_empty_string(os_path_exists, config):
     os_path_exists.return_value = True
+    # already tested for allow_branches_without_version=False below
+    config["allow_branches_without_version"] = True
     cp = CherryPicker(
         "origin",
         "22a594a0047d7706537ff2ac676cdc0f1dcb329c",
         ["3.1", "2.7", "3.10", "3.6", ""],
+        config=config,
+    )
+    with pytest.raises(ValueError):
+        cp.sorted_branches
+
+
+@pytest.mark.parametrize(
+    "input_branches",
+    [
+        (["3.1", "2.7", "3.x10", "3.6", ""]),
+        (["stable-3.1", "lts-2.7", "3.10-other", "smth3.6else", "invalid"]),
+    ],
+)
+@mock.patch("os.path.exists")
+def test_invalid_branches(os_path_exists, config, input_branches):
+    os_path_exists.return_value = True
+    cp = CherryPicker(
+        "origin",
+        "22a594a0047d7706537ff2ac676cdc0f1dcb329c",
+        input_branches,
         config=config,
     )
     with pytest.raises(ValueError):
@@ -434,6 +465,7 @@ def test_load_full_config(tmp_git_repo_dir, git_add, git_commit):
             "team": "python",
             "fix_commit_msg": True,
             "default_branch": "devel",
+            "allow_branches_without_version": False,
         },
     )
 
@@ -457,6 +489,7 @@ def test_load_partial_config(tmp_git_repo_dir, git_add, git_commit):
             "team": "python",
             "fix_commit_msg": True,
             "default_branch": "main",
+            "allow_branches_without_version": False,
         },
     )
 
@@ -485,6 +518,7 @@ def test_load_config_no_head_sha(tmp_git_repo_dir, git_add, git_commit):
             "team": "python",
             "fix_commit_msg": True,
             "default_branch": "devel",
+            "allow_branches_without_version": False,
         },
     )
 
