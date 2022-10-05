@@ -30,7 +30,7 @@ DEFAULT_CONFIG = collections.ChainMap(
         "check_sha": "7f777ed95a19224294949e1b4ce56bbffcb1fe9f",
         "fix_commit_msg": True,
         "default_branch": "main",
-        "allow_branches_without_version": False,
+        "require_version_in_branch_name": True,
     }
 )
 
@@ -867,12 +867,12 @@ def version_sort_key(config, branch):
     except AttributeError as attr_err:
         if not branch:
             raise ValueError("Branch name is an empty string.") from attr_err
-        if config["allow_branches_without_version"]:
-            # Use '0' to sort regular branch names *after* version numbers
-            return (1, branch)
-        raise ValueError(
-            f"Branch {branch} seems to not have a version in its name."
-        ) from attr_err
+        if config["require_version_in_branch_name"]:
+            raise ValueError(
+                f"Branch {branch} seems to not have a version in its name."
+            ) from attr_err
+        # Use '0' to sort regular branch names *after* version numbers
+        return (1, branch)
     else:
         # Use '0' to sort version numbers *before* regular branch names
         return (0, *(-int(x) for x in raw_version))

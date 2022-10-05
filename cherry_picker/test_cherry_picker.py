@@ -201,31 +201,31 @@ def test_get_author_info_from_short_sha(subprocess_check_output):
 
 
 @pytest.mark.parametrize(
-    "input_branches,sorted_branches,allow_versionless",
+    "input_branches,sorted_branches,require_version",
     [
-        (["3.1", "2.7", "3.10", "3.6"], ["3.10", "3.6", "3.1", "2.7"], False),
-        (
-            ["stable-3.1", "lts-2.7", "3.10-other", "smth3.6else"],
-            ["3.10-other", "smth3.6else", "stable-3.1", "lts-2.7"],
-            False,
-        ),
         (["3.1", "2.7", "3.10", "3.6"], ["3.10", "3.6", "3.1", "2.7"], True),
         (
             ["stable-3.1", "lts-2.7", "3.10-other", "smth3.6else"],
             ["3.10-other", "smth3.6else", "stable-3.1", "lts-2.7"],
             True,
         ),
+        (["3.1", "2.7", "3.10", "3.6"], ["3.10", "3.6", "3.1", "2.7"], False),
+        (
+            ["stable-3.1", "lts-2.7", "3.10-other", "smth3.6else"],
+            ["3.10-other", "smth3.6else", "stable-3.1", "lts-2.7"],
+            False,
+        ),
         (
             ["3.7", "3.10", "2.7", "foo", "stable", "branch"],
             ["3.10", "3.7", "2.7", "branch", "foo", "stable"],
-            True,
+            False,
         ),
     ],
 )
 @mock.patch("os.path.exists")
-def test_sorted_branch(os_path_exists, config, input_branches, sorted_branches, allow_versionless):
+def test_sorted_branch(os_path_exists, config, input_branches, sorted_branches, require_version):
     os_path_exists.return_value = True
-    config["allow_branches_without_version"] = allow_versionless
+    config["require_version_in_branch_name"] = require_version
     cp = CherryPicker(
         "origin",
         "22a594a0047d7706537ff2ac676cdc0f1dcb329c",
@@ -238,8 +238,8 @@ def test_sorted_branch(os_path_exists, config, input_branches, sorted_branches, 
 @mock.patch("os.path.exists")
 def test_invalid_branch_empty_string(os_path_exists, config):
     os_path_exists.return_value = True
-    # already tested for allow_branches_without_version=False below
-    config["allow_branches_without_version"] = True
+    # already tested for require_version_in_branch_name=True below
+    config["require_version_in_branch_name"] = False
     cp = CherryPicker(
         "origin",
         "22a594a0047d7706537ff2ac676cdc0f1dcb329c",
@@ -465,7 +465,7 @@ def test_load_full_config(tmp_git_repo_dir, git_add, git_commit):
             "team": "python",
             "fix_commit_msg": True,
             "default_branch": "devel",
-            "allow_branches_without_version": False,
+            "require_version_in_branch_name": True,
         },
     )
 
@@ -489,7 +489,7 @@ def test_load_partial_config(tmp_git_repo_dir, git_add, git_commit):
             "team": "python",
             "fix_commit_msg": True,
             "default_branch": "main",
-            "allow_branches_without_version": False,
+            "require_version_in_branch_name": True,
         },
     )
 
@@ -518,7 +518,7 @@ def test_load_config_no_head_sha(tmp_git_repo_dir, git_add, git_commit):
             "team": "python",
             "fix_commit_msg": True,
             "default_branch": "devel",
-            "allow_branches_without_version": False,
+            "require_version_in_branch_name": True,
         },
     )
 
