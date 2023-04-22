@@ -440,7 +440,7 @@ $ cherry_picker --abort
             "maintainer_can_modify": True,
         }
         url = CREATE_PR_URL_TEMPLATE.format(config=self.config)
-        response = requests.post(url, headers=request_headers, json=data)
+        response = requests.post(url, headers=request_headers, json=data, timeout=10)
         if response.status_code == requests.codes.created:
             response_data = response.json()
             click.echo(f"Backport PR created at {response_data['html_url']}")
