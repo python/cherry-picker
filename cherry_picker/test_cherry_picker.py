@@ -135,6 +135,7 @@ def tmp_git_repo_dir(tmpdir, cd, git_init, git_commit, git_config):
             warnings.warn(
                 "You need git 2.28.0 or newer to run the full test suite.",
                 UserWarning,
+                stacklevel=2,
             )
     git_config("--local", "user.name", "Monty Python")
     git_config("--local", "user.email", "bot@python.org")
