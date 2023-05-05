@@ -22,7 +22,7 @@ requires-python = ">=3.7"
 dynamic = ["version", "description"]
 
 [project.urls]
-"Homepage" = "https://github.com/python/cherry_picker"
+"Homepage" = "https://github.com/python/cherry-picker"
 
 [project.scripts]
 cherry_picker = "cherry_picker.cherry_picker:cherry_pick_cli"
