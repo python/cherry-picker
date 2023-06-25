@@ -871,10 +871,10 @@ def version_sort_key(config, branch):
             raise ValueError(
                 f"Branch {branch} seems to not have a version in its name."
             ) from attr_err
-        # Use '0' to sort regular branch names *after* version numbers
+        # Use 1 to sort regular branch names *after* version numbers
         return (1, branch)
     else:
-        # Use '0' to sort version numbers *before* regular branch names
+        # Use 0 to sort version numbers *before* regular branch names
         return (0, *(-int(x) for x in raw_version))
 
 
