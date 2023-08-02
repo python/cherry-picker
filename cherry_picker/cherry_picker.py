@@ -109,7 +109,6 @@ class CherryPicker:
         chosen_config_path=None,
         auto_pr=True,
     ):
-
         self.chosen_config_path = chosen_config_path
         """The config reference used in the current runtime.
 
@@ -239,14 +238,11 @@ class CherryPicker:
         try:
             self.run_cmd(cmd)
         except subprocess.CalledProcessError as err:
-            click.echo(
-                f"Error checking out the branch {checked_out_branch!r}."
-            )
+            click.echo(f"Error checking out the branch {checked_out_branch!r}.")
             click.echo(err.output)
             raise BranchCheckoutException(checked_out_branch)
         if create_branch:
             self.unset_upstream(checked_out_branch)
-
 
     def get_commit_message(self, commit_sha):
         """
