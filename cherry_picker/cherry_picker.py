@@ -109,7 +109,6 @@ class CherryPicker:
         chosen_config_path=None,
         auto_pr=True,
     ):
-
         self.chosen_config_path = chosen_config_path
         """The config reference used in the current runtime.
 
@@ -239,11 +238,11 @@ class CherryPicker:
         try:
             self.run_cmd(cmd)
         except subprocess.CalledProcessError as err:
-            click.echo(
-                f"Error checking out the branch {checked_out_branch!r}."
-            )
+            click.echo(f"Error checking out the branch {checked_out_branch!r}.")
             click.echo(err.output)
             raise BranchCheckoutException(checked_out_branch)
+        if create_branch:
+            self.unset_upstream(checked_out_branch)
 
     def get_commit_message(self, commit_sha):
         """
@@ -484,6 +483,13 @@ $ cherry_picker --abort
         else:
             click.echo(f"branch {branch} has been deleted.")
             set_state(WORKFLOW_STATES.REMOVED_BACKPORT_BRANCH)
+
+    def unset_upstream(self, branch):
+        cmd = ["git", "branch", "--unset-upstream", branch]
+        try:
+            return self.run_cmd(cmd)
+        except subprocess.CalledProcessError as cpe:
+            click.echo(cpe.output)
 
     def backport(self):
         if not self.branches:
