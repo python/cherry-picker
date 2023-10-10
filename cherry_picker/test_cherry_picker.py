@@ -1,8 +1,8 @@
 import os
 import pathlib
+import re
 import subprocess
 import warnings
-import re
 from collections import ChainMap
 from unittest import mock
 
