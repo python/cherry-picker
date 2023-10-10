@@ -541,7 +541,7 @@ $ cherry_picker --abort
         run `git cherry-pick --abort` and then clean up the branch
         """
         if self.initial_state != WORKFLOW_STATES.BACKPORT_PAUSED:
-            raise ValueError("One can only abort a paused process.")
+            raise ValueError(f"One can only abort a paused process. Current state: {self.initial_state}. Expected state: {WORKFLOW_STATES.BACKPORT_PAUSED}")
 
         try:
             validate_sha("CHERRY_PICK_HEAD")
