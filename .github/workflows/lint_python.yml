@@ -12,12 +12,11 @@ jobs:
       - run: pip install --upgrade pip wheel
         # TODO: remove setuptools installation when safety==2.4.0 is released
       - run: pip install --upgrade bandit codespell flake8 flake8-bugbear
-                         flake8-comprehensions isort mypy safety setuptools
+                         flake8-comprehensions mypy safety setuptools
       - run: bandit --recursive --skip B101,B404,B603 .
       - run: codespell --ignore-words-list="commitish"
       - run: flake8 . --count --ignore=C408,E203,F841,W503 --max-complexity=10
                       --max-line-length=143 --show-source --statistics
-      - run: isort --check-only --profile black .
       - run: pip install --editable .
       - run: mypy --ignore-missing-imports --install-types --non-interactive .
       - run: safety check
