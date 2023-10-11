@@ -18,7 +18,7 @@ of the maintenance branches (``3.6``, ``3.5``, ``2.7``).
 workflow as CPython. See the configuration file options below for more details.
 
 The maintenance branch names should contain some sort of version number (X.Y).
-For example: ``3.6``, ``3.5``, ``2.7``, ``stable-2.6``, ``2.5-lts``, are all 
+For example: ``3.6``, ``3.5``, ``2.7``, ``stable-2.6``, ``2.5-lts``, are all
 supported branch names.
 
 It will prefix the commit message with the branch, e.g. ``[3.6]``, and then
