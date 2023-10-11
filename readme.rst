@@ -367,7 +367,7 @@ in the directory where ``pyproject.toml`` exists:
 Changelog
 =========
 
-2.1.1
+2.2.0
 -----
 
 - Add log messages
