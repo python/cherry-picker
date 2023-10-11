@@ -1,5 +1,6 @@
 import os
 import pathlib
+import re
 import subprocess
 import warnings
 from collections import ChainMap
@@ -1141,7 +1142,7 @@ def test_continue_cherry_pick_invalid_state(tmp_git_repo_dir):
 
     assert get_state() == WORKFLOW_STATES.UNSET
 
-    with pytest.raises(ValueError, match=r"^One can only continue a paused process.$"):
+    with pytest.raises(ValueError, match=re.compile(r"^One can only continue a paused process.")):
         cherry_picker.continue_cherry_pick()
 
     assert get_state() == WORKFLOW_STATES.UNSET  # success
@@ -1167,7 +1168,7 @@ def test_abort_cherry_pick_invalid_state(tmp_git_repo_dir):
 
     assert get_state() == WORKFLOW_STATES.UNSET
 
-    with pytest.raises(ValueError, match=r"^One can only abort a paused process.$"):
+    with pytest.raises(ValueError, match=re.compile(r"^One can only abort a paused process.")):
         cherry_picker.abort_cherry_pick()
 
 
