@@ -862,7 +862,7 @@ def test_get_state_and_verify_fail(
     )
     with mock.patch(
         "cherry_picker.cherry_picker.validate_sha", return_value=True
-    ), pytest.raises(ValueError, match=expected_msg_regexp):
+    ), pytest.raises(InvalidRepoException, match=expected_msg_regexp):
         cherry_picker = CherryPicker("origin", "xxx", [])
 
 
