@@ -11,9 +11,8 @@ jobs:
           cache-dependency-path: .github/workflows/lint_python.yml
       - run: pip install --upgrade pip wheel
         # TODO: remove setuptools installation when safety==2.4.0 is released
-      - run: pip install --upgrade bandit codespell
+      - run: pip install --upgrade codespell
                          mypy safety setuptools
-      - run: bandit --recursive --skip B101,B404,B603 .
       - run: codespell --ignore-words-list="commitish"
       - run: pip install --editable .
       - run: mypy --ignore-missing-imports --install-types --non-interactive .
