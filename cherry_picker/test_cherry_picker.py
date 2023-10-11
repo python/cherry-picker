@@ -131,7 +131,7 @@ def tmp_git_repo_dir(tmpdir, cd, git_init, git_commit, git_config):
     except subprocess.CalledProcessError:
         version = subprocess.run(("git", "--version"), capture_output=True)
         # the output looks like "git version 2.34.1"
-        v = version.stdout.decode("utf-8").removeprefix('git version ').split('.')
+        v = version.stdout.decode("utf-8").removeprefix("git version ").split(".")
         if (int(v[0]), int(v[1])) < (2, 28):
             warnings.warn(
                 "You need git 2.28.0 or newer to run the full test suite.",
@@ -264,7 +264,9 @@ def test_get_cherry_pick_branch(os_path_exists, config):
         ("python", "python"),
     ),
 )
-def test_upstream_name(remote_name, upstream_remote, config, tmp_git_repo_dir, git_remote):
+def test_upstream_name(
+    remote_name, upstream_remote, config, tmp_git_repo_dir, git_remote
+):
     git_remote("add", remote_name, "https://github.com/python/cpython.git")
     if remote_name != "origin":
         git_remote("add", "origin", "https://github.com/miss-islington/cpython.git")
@@ -292,10 +294,14 @@ def test_upstream_name(remote_name, upstream_remote, config, tmp_git_repo_dir, g
         (None, "python", None),
     ),
 )
-def test_error_on_missing_remote(remote_to_add, remote_name, upstream_remote, config, tmp_git_repo_dir, git_remote):
+def test_error_on_missing_remote(
+    remote_to_add, remote_name, upstream_remote, config, tmp_git_repo_dir, git_remote
+):
     git_remote("add", "some-remote-name", "https://github.com/python/cpython.git")
     if remote_to_add is not None:
-        git_remote("add", remote_to_add, "https://github.com/miss-islington/cpython.git")
+        git_remote(
+            "add", remote_to_add, "https://github.com/miss-islington/cpython.git"
+        )
 
     branches = ["3.6"]
     with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
@@ -610,7 +616,9 @@ Co-authored-by: PR Co-Author <another@author.com>""",
         ),
     ),
 )
-def test_get_updated_commit_message_with_trailers(commit_message, expected_commit_message):
+def test_get_updated_commit_message_with_trailers(
+    commit_message, expected_commit_message
+):
     cherry_pick_branch = "backport-22a594a-3.6"
     commit = "b9ff498793611d1c6a9b99df464812931a1e2d69"
 
@@ -625,7 +633,9 @@ def test_get_updated_commit_message_with_trailers(commit_message, expected_commi
         "cherry_picker.cherry_picker.get_author_info_from_short_sha",
         return_value="PR Author <author@name.email>",
     ):
-        updated_commit_message = cherry_picker.get_updated_commit_message(cherry_pick_branch)
+        updated_commit_message = cherry_picker.get_updated_commit_message(
+            cherry_pick_branch
+        )
 
     assert updated_commit_message == expected_commit_message
 
@@ -764,7 +774,9 @@ def test_cleanup_branch(tmp_git_repo_dir, git_checkout):
     assert get_current_branch() == "main"
 
 
-def test_cleanup_branch_checkout_previous_branch(tmp_git_repo_dir, git_checkout, git_worktree):
+def test_cleanup_branch_checkout_previous_branch(
+    tmp_git_repo_dir, git_checkout, git_worktree
+):
     assert get_state() == WORKFLOW_STATES.UNSET
 
     with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
@@ -790,7 +802,9 @@ def test_cleanup_branch_fail(tmp_git_repo_dir):
     assert get_state() == WORKFLOW_STATES.REMOVING_BACKPORT_BRANCH_FAILED
 
 
-def test_cleanup_branch_checkout_fail(tmp_git_repo_dir, tmpdir, git_checkout, git_worktree):
+def test_cleanup_branch_checkout_fail(
+    tmp_git_repo_dir, tmpdir, git_checkout, git_worktree
+):
     assert get_state() == WORKFLOW_STATES.UNSET
 
     with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
@@ -845,7 +859,7 @@ def test_get_state_and_verify_fail(
     set_state(tested_state)
 
     expected_msg_regexp = (
-        fr"^Run state cherry-picker.state={tested_state.name} in Git config "
+        rf"^Run state cherry-picker.state={tested_state.name} in Git config "
         r"is not known."
         "\n"
         r"Perhaps it has been set by a newer "
@@ -1008,7 +1022,9 @@ def test_backport_cherry_pick_branch_already_exists(
             pr_remote, scm_revision, cherry_pick_target_branches
         )
 
-    backport_branch_name = cherry_picker.get_cherry_pick_branch(cherry_pick_target_branches[0])
+    backport_branch_name = cherry_picker.get_cherry_pick_branch(
+        cherry_pick_target_branches[0]
+    )
     git_branch(backport_branch_name)
 
     with mock.patch.object(cherry_picker, "fetch_upstream"), pytest.raises(
@@ -1055,7 +1071,15 @@ def test_backport_success(
 @pytest.mark.parametrize("already_committed", (True, False))
 @pytest.mark.parametrize("push", (True, False))
 def test_backport_pause_and_continue(
-    tmp_git_repo_dir, git_branch, git_add, git_commit, git_checkout, git_reset, git_remote, already_committed, push
+    tmp_git_repo_dir,
+    git_branch,
+    git_add,
+    git_commit,
+    git_checkout,
+    git_reset,
+    git_remote,
+    already_committed,
+    push,
 ):
     cherry_pick_target_branches = ("3.8",)
     pr_remote = "origin"
@@ -1087,7 +1111,9 @@ def test_backport_pause_and_continue(
 
     if not already_committed:
         git_reset("HEAD~1")
-        assert len(get_commits_from_backport_branch(cherry_pick_target_branches[0])) == 0
+        assert (
+            len(get_commits_from_backport_branch(cherry_pick_target_branches[0])) == 0
+        )
 
     with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
         cherry_picker = CherryPicker(pr_remote, "", [], push=push)
@@ -1142,7 +1168,9 @@ def test_continue_cherry_pick_invalid_state(tmp_git_repo_dir):
 
     assert get_state() == WORKFLOW_STATES.UNSET
 
-    with pytest.raises(ValueError, match=re.compile(r"^One can only continue a paused process.")):
+    with pytest.raises(
+        ValueError, match=re.compile(r"^One can only continue a paused process.")
+    ):
         cherry_picker.continue_cherry_pick()
 
     assert get_state() == WORKFLOW_STATES.UNSET  # success
@@ -1168,7 +1196,9 @@ def test_abort_cherry_pick_invalid_state(tmp_git_repo_dir):
 
     assert get_state() == WORKFLOW_STATES.UNSET
 
-    with pytest.raises(ValueError, match=re.compile(r"^One can only abort a paused process.")):
+    with pytest.raises(
+        ValueError, match=re.compile(r"^One can only abort a paused process.")
+    ):
         cherry_picker.abort_cherry_pick()
 
 

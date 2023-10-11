@@ -91,7 +91,6 @@ class InvalidRepoException(Exception):
 
 
 class CherryPicker:
-
     ALLOWED_STATES = WORKFLOW_STATES.BACKPORT_PAUSED, WORKFLOW_STATES.UNSET
     """The list of states expected at the start of the app."""
 
@@ -323,7 +322,9 @@ To abort the cherry-pick and cleanup:
         commit_prefix = ""
         if self.prefix_commit:
             commit_prefix = f"[{get_base_branch(cherry_pick_branch)}] "
-        updated_commit_message = f"{commit_prefix}{self.get_commit_message(self.commit_sha1)}"
+        updated_commit_message = (
+            f"{commit_prefix}{self.get_commit_message(self.commit_sha1)}"
+        )
 
         # Add '(cherry picked from commit ...)' to the message
         # and add new Co-authored-by trailer if necessary.
@@ -349,7 +350,9 @@ To abort the cherry-pick and cleanup:
         #
         # This needs to be done because `git interpret-trailers` required us to add `:`
         # to `cherry_pick_information` when we don't actually want it.
-        before, after = output.strip().decode().rsplit(f"\n{cherry_pick_information}", 1)
+        before, after = (
+            output.strip().decode().rsplit(f"\n{cherry_pick_information}", 1)
+        )
         if not before.endswith("\n"):
             # ensure that we still have a newline between cherry pick information
             # and commit headline
@@ -359,7 +362,7 @@ To abort the cherry-pick and cleanup:
         return updated_commit_message
 
     def amend_commit_message(self, cherry_pick_branch):
-        """ prefix the commit message with (X.Y) """
+        """prefix the commit message with (X.Y)"""
 
         updated_commit_message = self.get_updated_commit_message(cherry_pick_branch)
         if self.dry_run:
@@ -442,7 +445,7 @@ $ cherry_picker --abort
         if response.status_code == requests.codes.created:
             response_data = response.json()
             click.echo(f"Backport PR created at {response_data['html_url']}")
-            self.pr_number = response_data['number']
+            self.pr_number = response_data["number"]
         else:
             click.echo(response.status_code)
             click.echo(response.text)
