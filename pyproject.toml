@@ -1,7 +1,8 @@
 [build-system]
-build-backend = "flit_core.buildapi"
+build-backend = "hatchling.build"
 requires = [
-  "flit_core<4,>=3.2",
+  "hatch-vcs",
+  "hatchling",
 ]
 
 [project]
@@ -39,3 +40,9 @@ dev = [
 "Homepage" = "https://github.com/python/cherry-picker"
 [project.scripts]
 cherry_picker = "cherry_picker.cherry_picker:cherry_pick_cli"
+
+[tool.hatch]
+version.source = "vcs"
+
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"

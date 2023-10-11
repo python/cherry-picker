@@ -1,2 +1,4 @@
 """Backport CPython changes from main to maintenance branches."""
-__version__ = "2.2.0"
+import importlib.metadata
+
+__version__ = importlib.metadata.version(__name__)
