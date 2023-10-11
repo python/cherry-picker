@@ -389,7 +389,8 @@ def test_get_updated_commit_message_without_links_replacement(config):
 
 @mock.patch("subprocess.check_output")
 def test_is_cpython_repo(subprocess_check_output):
-    subprocess_check_output.return_value = """commit 7f777ed95a19224294949e1b4ce56bbffcb1fe9f
+    subprocess_check_output.return_value = """\
+commit 7f777ed95a19224294949e1b4ce56bbffcb1fe9f
 Author: Guido van Rossum <guido@python.org>
 Date:   Thu Aug 9 14:25:15 1990 +0000
 
@@ -503,7 +504,8 @@ def test_load_config_no_head_sha(tmp_git_repo_dir, git_add, git_commit):
 
 
 def test_normalize_long_commit_message():
-    commit_message = """[3.6] Fix broken `Show Source` links on documentation pages (GH-3113)
+    commit_message = """\
+[3.6] Fix broken `Show Source` links on documentation pages (GH-3113)
 
 The `Show Source` was broken because of a change made in sphinx 1.5.1
 In Sphinx 1.4.9, the sourcename was "index.txt".
@@ -529,7 +531,8 @@ Co-authored-by: Elmar Ritsch <35851+elritsch@users.noreply.github.com>"""
 
 
 def test_normalize_short_commit_message():
-    commit_message = """[3.6] Fix broken `Show Source` links on documentation pages (GH-3113)
+    commit_message = """\
+[3.6] Fix broken `Show Source` links on documentation pages (GH-3113)
 
 (cherry picked from commit b9ff498793611d1c6a9b99df464812931a1e2d69)
 
@@ -879,7 +882,7 @@ def test_get_state_and_verify_fail(
     with mock.patch(
         "cherry_picker.cherry_picker.validate_sha", return_value=True
     ), pytest.raises(InvalidRepoException, match=expected_msg_regexp):
-        cherry_picker = CherryPicker("origin", "xxx", [])
+        CherryPicker("origin", "xxx", [])
 
 
 def test_push_to_remote_fail(tmp_git_repo_dir):
