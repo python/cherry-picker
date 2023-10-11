@@ -372,6 +372,7 @@ Changelog
 
 - Add log messages
 - Fix for conflict handling, get the state correctly. (`PR 88 <https://github.com/python/cherry-picker/pull/88>`_)
+- Drop support for Python 3.7 (`PR 90 <https://github.com/python/cherry-picker/pull/90>`_)
 
 2.1.0
 -----
