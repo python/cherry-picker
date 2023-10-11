@@ -119,7 +119,6 @@ class CherryPicker:
         self.config = config
         self.check_repo()  # may raise InvalidRepoException
 
-        self.initial_state = self.get_state_and_verify()
         """The runtime state loaded from the config.
 
         Used to verify that we resume the process from the valid
@@ -540,9 +539,10 @@ $ cherry_picker --abort
         """
         run `git cherry-pick --abort` and then clean up the branch
         """
-        if self.initial_state != WORKFLOW_STATES.BACKPORT_PAUSED:
+        state = self.get_state_and_verify()
+        if state != WORKFLOW_STATES.BACKPORT_PAUSED:
             raise ValueError(
-                f"One can only abort a paused process. Current state: {self.initial_state}. Expected state: {WORKFLOW_STATES.BACKPORT_PAUSED}"
+                f"One can only abort a paused process. Current state: {state}. Expected state: {WORKFLOW_STATES.BACKPORT_PAUSED}"
             )
 
         try:
@@ -572,8 +572,11 @@ $ cherry_picker --abort
         open the PR
         clean up branch
         """
-        if self.initial_state != WORKFLOW_STATES.BACKPORT_PAUSED:
-            raise ValueError("One can only continue a paused process.")
+        state = self.get_state_and_verify()
+        if state != WORKFLOW_STATES.BACKPORT_PAUSED:
+            raise ValueError(
+                f"One can only continue a paused process. Current state: {state}. Expected state: {WORKFLOW_STATES.BACKPORT_PAUSED}"
+            )
 
         cherry_pick_branch = get_current_branch()
         if cherry_pick_branch.startswith("backport-"):
