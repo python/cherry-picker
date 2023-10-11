@@ -367,6 +367,12 @@ in the directory where ``pyproject.toml`` exists:
 Changelog
 =========
 
+2.1.1
+-----
+
+- Add log messages
+- Fix for conflict handling, get the state correctly. (`PR 88 <https://github.com/python/cherry-picker/pull/88>`_)
+
 2.1.0
 -----
 
