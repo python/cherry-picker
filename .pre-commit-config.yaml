@@ -63,5 +63,11 @@ repos:
     hooks:
       - id: validate-pyproject
 
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.2.6
+    hooks:
+    - id: codespell
+      args: [--ignore-words-list=commitish]
+
 ci:
   autoupdate_schedule: quarterly
