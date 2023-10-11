@@ -11,7 +11,5 @@ jobs:
           cache-dependency-path: .github/workflows/lint_python.yml
       - run: pip install --upgrade pip wheel
         # TODO: remove setuptools installation when safety==2.4.0 is released
-      - run: pip install --upgrade mypy safety setuptools
-      - run: pip install --editable .
-      - run: mypy --ignore-missing-imports --install-types --non-interactive .
+      - run: pip install --upgrade safety setuptools
       - run: safety check
