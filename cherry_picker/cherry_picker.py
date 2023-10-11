@@ -640,8 +640,9 @@ $ cherry_picker --abort
         """
         try:
             validate_sha(self.config["check_sha"])
-        except ValueError:
-            raise InvalidRepoException()
+            self.get_state_and_verify()
+        except ValueError as ve:
+            raise InvalidRepoException(ve.args[0])
 
     def get_state_and_verify(self):
         """Return the run progress state stored in the Git config.
