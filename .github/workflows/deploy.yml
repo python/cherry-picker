@@ -1,4 +1,4 @@
-name: Build & maybe upload PyPI package
+name: Build package
 
 on:
   push:
@@ -22,7 +22,7 @@ jobs:
 
       - uses: hynek/build-and-inspect-python-package@v1
 
-  # Upload to Test PyPI on every commit on main.
+  # Publish to Test PyPI on every commit on main.
   release-test-pypi:
     name: Publish in-dev package to test.pypi.org
     if: |
@@ -42,14 +42,14 @@ jobs:
           name: Packages
           path: dist
 
-      - name: Upload package to Test PyPI
+      - name: Publish to Test PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
 
-  # Upload to real PyPI on GitHub Releases.
+  # Publish to PyPI on GitHub Releases.
   release-pypi:
-    name: Publish released package to pypi.org
+    name: Publish to PyPI
     # Only run for published releases.
     if: |
       github.repository_owner == 'python'
@@ -67,5 +67,5 @@ jobs:
           name: Packages
           path: dist
 
-      - name: Upload package to PyPI
+      - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
