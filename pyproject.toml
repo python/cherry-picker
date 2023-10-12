@@ -1,34 +1,48 @@
 [build-system]
-requires = ["flit_core>=3.2,<4"]
-build-backend = "flit_core.buildapi"
+build-backend = "hatchling.build"
+requires = [
+  "hatch-vcs",
+  "hatchling",
+]
 
 [project]
-name = "cherry_picker"
-authors = [{ name = "Mariatta Wijaya", email = "mariatta@python.org" }]
-maintainers = [{ name = "Python Core Developers", email = "core-workflow@python.org" }]
-dependencies = [
-    "click>=6.0",
-    "gidgethub",
-    "requests",
-    "tomli>=1.1.0;python_version<'3.11'",
-]
+name = "cherry-picker"
 readme = "readme.rst"
-classifiers = [
-    "Programming Language :: Python :: 3.8",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache Software License",
-]
+maintainers = [{ name = "Python Core Developers", email = "core-workflow@python.org" }]
+authors = [{ name = "Mariatta Wijaya", email = "mariatta@python.org" }]
 requires-python = ">=3.8"
-dynamic = ["version", "description"]
-
+classifiers = [
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
+dynamic = [
+  "description",
+  "version",
+]
+dependencies = [
+  "click>=6",
+  "gidgethub",
+  "requests",
+  'tomli>=1.1; python_version < "3.11"',
+]
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "pytest-cov",
+]
 [project.urls]
 "Homepage" = "https://github.com/python/cherry-picker"
-
 [project.scripts]
 cherry_picker = "cherry_picker.cherry_picker:cherry_pick_cli"
 
-[project.optional-dependencies]
-dev = [
-    "pytest",
-    "pytest-cov",
-]
+[tool.hatch]
+version.source = "vcs"
+
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
