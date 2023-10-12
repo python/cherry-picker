@@ -41,8 +41,10 @@ dev = [
 [project.scripts]
 cherry_picker = "cherry_picker.cherry_picker:cherry_pick_cli"
 
-[tool.hatch]
-version.source = "vcs"
+[tool.hatch.version]
+source = "vcs"
+# Change regex to match tags like "cherry-picker-v2.2.0".
+tag-pattern = '^cherry-picker-(?P<version>[vV]?\d+(?:\.\d+){0,2}[^\+]*)(?:\+.*)?$'
 
 [tool.hatch.version.raw-options]
 local_scheme = "no-local-version"
