@@ -19,8 +19,8 @@
 
   - [ ] Click "Publish release"
 
-- [ ] Check the tagged `GitHub Actions build <https://github.com/python/cherry-picker/actions/workflows/deploy.yml>`
-      has deployed to `PyPI <https://pypi.org/project/cherry_picker/#history>`
+- [ ] Check the tagged [GitHub Actions build] (https://github.com/python/cherry-picker/actions/workflows/deploy.yml)
+      has deployed to [PyPI] (https://pypi.org/project/cherry_picker/#history)
 
 - [ ] Check installation:
 
