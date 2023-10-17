@@ -5,19 +5,19 @@
 
 - [ ] Update [changelog](https://github.com/python/cherry-picker#changelog)
 
-- [ ] Go to https://github.com/python/cherry-picker/releases
+- [ ] Go to [Releases page](https://github.com/python/cherry-picker/releases) and
 
-- [ ] Click "Draft a new release"
+  - [ ] Click "Draft a new release"
 
-- [ ] Click "Choose a tag"
+  - [ ] Click "Choose a tag"
 
-- [ ] Type the next `cherry-picker-vX.Y.Z` version and select "**Create new tag: cherry-picker-vX.Y.Z** on publish"
+  - [ ] Type the next `cherry-picker-vX.Y.Z` version and select "**Create new tag: cherry-picker-vX.Y.Z** on publish"
 
-- [ ] Leave the "Release title" blank (it will be autofilled)
+  - [ ] Leave the "Release title" blank (it will be autofilled)
 
-- [ ] Click "Generate release notes" and amend as required
+  - [ ] Click "Generate release notes" and amend as required
 
-- [ ] Click "Publish release"
+  - [ ] Click "Publish release"
 
 - [ ] Check the tagged `GitHub Actions build <https://github.com/python/cherry-picker/actions/workflows/deploy.yml>`
       has deployed to `PyPI <https://pypi.org/project/cherry_picker/#history>`
