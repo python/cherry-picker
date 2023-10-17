@@ -25,5 +25,5 @@
 - [ ] Check installation:
 
 ```bash
-pip3 uninstall -y cherry_picker && pip3 install -U cherry_picker && cherry_picker --version
+python -m pip uninstall -y cherry_picker && python -m pip install -U cherry_picker && cherry_picker --version
 ```
