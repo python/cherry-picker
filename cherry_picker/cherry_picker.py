@@ -553,7 +553,7 @@ $ cherry_picker --abort
         state = self.get_state_and_verify()
         if state != WORKFLOW_STATES.BACKPORT_PAUSED:
             raise ValueError(
-                "One can only abort a paused process. "
+                f"One can only abort a paused process. "
                 f"Current state: {state}. "
                 f"Expected state: {WORKFLOW_STATES.BACKPORT_PAUSED}"
             )
