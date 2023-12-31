@@ -5,7 +5,7 @@
 
 - [ ] Update [changelog](https://github.com/python/cherry-picker#changelog)
 
-- [ ] Go to [Releases page](https://github.com/python/cherry-picker/releases) and
+- [ ] Go to the [Releases page](https://github.com/python/cherry-picker/releases) and
 
   - [ ] Click "Draft a new release"
 
@@ -19,8 +19,8 @@
 
   - [ ] Click "Publish release"
 
-- [ ] Check the tagged [GitHub Actions build] (https://github.com/python/cherry-picker/actions/workflows/deploy.yml)
-      has deployed to [PyPI] (https://pypi.org/project/cherry_picker/#history)
+- [ ] Check the tagged [GitHub Actions build](https://github.com/python/cherry-picker/actions/workflows/deploy.yml)
+      has deployed to [PyPI](https://pypi.org/project/cherry_picker/#history)
 
 - [ ] Check installation:
 
