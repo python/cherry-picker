@@ -3,7 +3,7 @@
 - [ ] check tests pass on [GitHub Actions](https://github.com/python/cherry-picker/actions)
       [![GitHub Actions status](https://github.com/python/cherry-picker/actions/workflows/main.yml/badge.svg)](https://github.com/python/cherry-picker/actions/workflows/main.yml)
 
-- [ ] Update [changelog](https://github.com/python/cherry-picker#changelog)
+- [ ] Update [changelog](https://github.com/python/cherry-picker/blob/main/CHANGELOG.md)
 
 - [ ] Go to the [Releases page](https://github.com/python/cherry-picker/releases) and
 
