@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import collections
 import enum
 import os
@@ -91,7 +93,6 @@ class InvalidRepoException(Exception):
 
 
 class CherryPicker:
-
     ALLOWED_STATES = WORKFLOW_STATES.BACKPORT_PAUSED, WORKFLOW_STATES.UNSET
     """The list of states expected at the start of the app."""
 
@@ -151,7 +152,7 @@ class CherryPicker:
         set_state(WORKFLOW_STATES.BACKPORT_PAUSED)
 
     def remember_previous_branch(self):
-        """Save the current branch into Git config to be able to get back to it later."""
+        """Save the current branch into Git config, to be used later."""
         current_branch = get_current_branch()
         save_cfg_vals_to_git_cfg(previous_branch=current_branch)
 
@@ -160,7 +161,8 @@ class CherryPicker:
         """Get the remote name to use for upstream branches
 
         Uses the remote passed to `--upstream-remote`.
-        If this flag wasn't passed, it uses "upstream" if it exists or "origin" otherwise.
+        If this flag wasn't passed, it uses "upstream" if it exists or "origin"
+        otherwise.
         """
         # the cached calculated value of the property
         if self._upstream is not None:
@@ -203,7 +205,10 @@ class CherryPicker:
         return f"backport-{self.commit_sha1[:7]}-{maint_branch}"
 
     def get_pr_url(self, base_branch, head_branch):
-        return f"https://github.com/{self.config['team']}/{self.config['repo']}/compare/{base_branch}...{self.username}:{head_branch}?expand=1"
+        return (
+            f"https://github.com/{self.config['team']}/{self.config['repo']}"
+            f"/compare/{base_branch}...{self.username}:{head_branch}?expand=1"
+        )
 
     def fetch_upstream(self):
         """git fetch <upstream>"""
@@ -323,7 +328,9 @@ To abort the cherry-pick and cleanup:
         commit_prefix = ""
         if self.prefix_commit:
             commit_prefix = f"[{get_base_branch(cherry_pick_branch)}] "
-        updated_commit_message = f"{commit_prefix}{self.get_commit_message(self.commit_sha1)}"
+        updated_commit_message = (
+            f"{commit_prefix}{self.get_commit_message(self.commit_sha1)}"
+        )
 
         # Add '(cherry picked from commit ...)' to the message
         # and add new Co-authored-by trailer if necessary.
@@ -349,7 +356,9 @@ To abort the cherry-pick and cleanup:
         #
         # This needs to be done because `git interpret-trailers` required us to add `:`
         # to `cherry_pick_information` when we don't actually want it.
-        before, after = output.strip().decode().rsplit(f"\n{cherry_pick_information}", 1)
+        before, after = (
+            output.strip().decode().rsplit(f"\n{cherry_pick_information}", 1)
+        )
         if not before.endswith("\n"):
             # ensure that we still have a newline between cherry pick information
             # and commit headline
@@ -359,7 +368,7 @@ To abort the cherry-pick and cleanup:
         return updated_commit_message
 
     def amend_commit_message(self, cherry_pick_branch):
-        """ prefix the commit message with (X.Y) """
+        """Prefix the commit message with (X.Y)"""
 
         updated_commit_message = self.get_updated_commit_message(cherry_pick_branch)
         if self.dry_run:
@@ -442,7 +451,7 @@ $ cherry_picker --abort
         if response.status_code == requests.codes.created:
             response_data = response.json()
             click.echo(f"Backport PR created at {response_data['html_url']}")
-            self.pr_number = response_data['number']
+            self.pr_number = response_data["number"]
         else:
             click.echo(response.status_code)
             click.echo(response.text)
@@ -542,7 +551,9 @@ $ cherry_picker --abort
         state = self.get_state_and_verify()
         if state != WORKFLOW_STATES.BACKPORT_PAUSED:
             raise ValueError(
-                f"One can only abort a paused process. Current state: {state}. Expected state: {WORKFLOW_STATES.BACKPORT_PAUSED}"
+                f"One can only abort a paused process. "
+                f"Current state: {state}. "
+                f"Expected state: {WORKFLOW_STATES.BACKPORT_PAUSED}"
             )
 
         try:
@@ -575,7 +586,9 @@ $ cherry_picker --abort
         state = self.get_state_and_verify()
         if state != WORKFLOW_STATES.BACKPORT_PAUSED:
             raise ValueError(
-                f"One can only continue a paused process. Current state: {state}. Expected state: {WORKFLOW_STATES.BACKPORT_PAUSED}"
+                "One can only continue a paused process. "
+                f"Current state: {state}. "
+                f"Expected state: {WORKFLOW_STATES.BACKPORT_PAUSED}"
             )
 
         cherry_pick_branch = get_current_branch()
@@ -623,7 +636,8 @@ $ cherry_picker --abort
 
         else:
             click.echo(
-                f"Current branch ({cherry_pick_branch}) is not a backport branch.  Will not continue. \U0001F61B"
+                f"Current branch ({cherry_pick_branch}) is not a backport branch. "
+                "Will not continue. \U0001F61B"
             )
             set_state(WORKFLOW_STATES.CONTINUATION_FAILED)
 
@@ -635,8 +649,8 @@ $ cherry_picker --abort
         """
         Check that the repository is for the project we're configured to operate on.
 
-        This function performs the check by making sure that the sha specified in the config
-        is present in the repository that we're operating on.
+        This function performs the check by making sure that the sha specified in the
+        config is present in the repository that we're operating on.
         """
         try:
             validate_sha(self.config["check_sha"])
@@ -823,7 +837,8 @@ def get_base_branch(cherry_pick_branch):
 
     if prefix != "backport":
         raise ValueError(
-            'branch name is not prefixed with "backport-".  Is this a cherry_picker branch?'
+            'branch name is not prefixed with "backport-". '
+            "Is this a cherry_picker branch?"
         )
 
     if not re.match("[0-9a-f]{7,40}", sha):
@@ -851,7 +866,8 @@ def validate_sha(sha):
         subprocess.check_output(cmd, stderr=subprocess.STDOUT)
     except subprocess.SubprocessError:
         raise ValueError(
-            f"The sha listed in the branch name, {sha}, is not present in the repository"
+            f"The sha listed in the branch name, {sha}, "
+            "is not present in the repository"
         )
 
 
