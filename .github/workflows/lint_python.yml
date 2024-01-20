@@ -22,4 +22,5 @@ jobs:
       - run: pip install --editable .
       - run: mypy --ignore-missing-imports --install-types --non-interactive .
       - run: shopt -s globstar && pyupgrade --py38-plus **/*.py || true
-      - run: safety check
+      # # Ignore CVE-2023-5752, we're not using that pip or feature
+      - run: safety check --ignore 62044
