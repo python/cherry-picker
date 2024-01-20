@@ -370,7 +370,7 @@ To abort the cherry-pick and cleanup:
         return updated_commit_message
 
     def amend_commit_message(self, cherry_pick_branch):
-        """prefix the commit message with (X.Y)"""
+        """Prefix the commit message with (X.Y)"""
 
         updated_commit_message = self.get_updated_commit_message(cherry_pick_branch)
         if self.dry_run:
