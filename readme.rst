@@ -337,11 +337,7 @@ Tests require your local version of ``git`` to be ``2.28.0+``.
 Publishing to PyPI
 ==================
 
-- Create a new release branch.
-
-- Update the version info in ``__init__.py`` and ``readme.rst``, dropping the ``.dev``.
-
-- Tag the branch as ``cherry-picker-vX.Y.Z``.
+- See the `release checklist <https://github.com/python/cherry-picker/blob/main/RELEASING.md>`_.
 
 
 Local installation
@@ -352,7 +348,7 @@ in the directory where ``pyproject.toml`` exists:
 
 .. code-block:: console
 
-    $ flit install
+    $ pip install
 
 
 .. |pyversion status| image:: https://img.shields.io/pypi/pyversions/cherry-picker.svg
@@ -367,100 +363,4 @@ in the directory where ``pyproject.toml`` exists:
 Changelog
 =========
 
-2.2.0
------
-
-- Add log messages
-- Fix for conflict handling, get the state correctly. (`PR 88 <https://github.com/python/cherry-picker/pull/88>`_)
-- Drop support for Python 3.7 (`PR 90 <https://github.com/python/cherry-picker/pull/90>`_)
-
-2.1.0
------
-
-- Mix fixes: #28, #29, #31, #32, #33, #34, #36.
-
-2.0.0
------
-
-- Support the ``main`` branch by default. (`PR 23 <https://github.com/python/cherry-picker/pull/23>`_)
-  To use a different default branch, please configure it in the
-  ``.cherry-picker.toml`` file.
-
-- Renamed ``cherry-picker``'s own default branch to ``main``.
-
-1.3.2
------
-
-- Use ``--no-tags`` option when fetching upstream. (`PR 319 <https://github.com/python/core-workflow/pull/319>`_)
-
-1.3.1
------
-
-- Modernize cherry_picker's pyproject.toml file. (`PR #316 <https://github.com/python/core-workflow/pull/316>`_)
-
-- Remove the ``BACKPORT_COMPLETE`` state. Unset the states when backport is completed.
-  (`PR #315 <https://github.com/python/core-workflow/pull/315>`_)
-
-- Run Travis CI test on Windows (`PR #311 <https://github.com/python/core-workflow/pull/311>`_).
-
-1.3.0
------
-
-- Implement state machine and storing reference to the config
-  used at the beginning of the backport process using commit sha
-  and a repo-local Git config.
-  (`PR #295 <https://github.com/python/core-workflow/pull/295>`_).
-
-1.2.2
------
-
-- Relaxed click dependency (`PR #302 <https://github.com/python/core-workflow/pull/302>`_).
-
-1.2.1
------
-
-- Validate the branch name to operate on with ``--continue`` and fail early if the branch could not
-  have been created by cherry_picker. (`PR #266 <https://github.com/python/core-workflow/pull/266>`_).
-
-- Bugfix: Allow ``--continue`` to support version branches that have dashes in them.  This is
-  a bugfix of the additional branch versioning schemes introduced in 1.2.0.
-  (`PR #265 <https://github.com/python/core-workflow/pull/265>`_).
-
-- Bugfix: Be explicit about the branch name on the remote to push the cherry pick to.  This allows
-  cherry_picker to work correctly when the user has a git push strategy other than the default
-  configured. (`PR #264 <https://github.com/python/core-workflow/pull/264>`_).
-
-1.2.0
------
-
-- Add ``default_branch`` configuration item. The default is ``master``, which
-  is the default branch for CPython. It can be configured to other branches like,
-  ``devel``, or ``develop``.  The default branch is the branch cherry_picker
-  will return to after backporting. (`PR #254 <https://github.com/python/core-workflow/pull/254>`_
-  and `Issue #250 <https://github.com/python/core-workflow/issues/250>`_).
-
-- Support additional branch versioning schemes, such as ``something-X.Y``,
-  or ``X.Y-somethingelse``. (`PR #253 <https://github.com/python/core-workflow/pull/253>`_
-  and `Issue #251 <https://github.com/python/core-workflow/issues/251>`_).
-
-1.1.1
------
-
-- Change the calls to ``subprocess`` to use lists instead of strings. This fixes
-  the bug that affects users in Windows. (`PR #238 <https://github.com/python/core-workflow/pull/238>`_).
-
-1.1.0
------
-
-- Add ``fix_commit_msg`` configuration item. Setting fix_commit_msg to ``true``
-  will replace the issue number in the commit message, from ``#`` to ``GH-``.
-  This is the default behavior for CPython. Other projects can opt out by
-  setting it to ``false``. (`PR #233 <https://github.com/python/core-workflow/pull/233>`_
-  and `aiohttp Issue #2853 <https://github.com/aio-libs/aiohttp/issues/2853>`_).
-
-1.0.0
------
-
-- Support configuration file by using ``--config-path`` option, or by adding
-  ``.cherry-picker.toml`` file to the root of the project. (`Issue #225
-  <https://github.com/python/core-workflow/issues/225>`_).
+See the `changelog <https://github.com/python/cherry-picker/blob/main/CHANGELOG.md>`_.

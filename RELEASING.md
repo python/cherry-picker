@@ -3,9 +3,9 @@
 - [ ] check tests pass on [GitHub Actions](https://github.com/python/cherry-picker/actions)
       [![GitHub Actions status](https://github.com/python/cherry-picker/actions/workflows/main.yml/badge.svg)](https://github.com/python/cherry-picker/actions/workflows/main.yml)
 
-- [ ] Update [changelog](https://github.com/python/cherry-picker#changelog)
+- [ ] Update [changelog](https://github.com/python/cherry-picker/blob/main/CHANGELOG.md)
 
-- [ ] Go to [Releases page](https://github.com/python/cherry-picker/releases) and
+- [ ] Go to the [Releases page](https://github.com/python/cherry-picker/releases) and
 
   - [ ] Click "Draft a new release"
 
@@ -19,11 +19,11 @@
 
   - [ ] Click "Publish release"
 
-- [ ] Check the tagged [GitHub Actions build] (https://github.com/python/cherry-picker/actions/workflows/deploy.yml)
-      has deployed to [PyPI] (https://pypi.org/project/cherry_picker/#history)
+- [ ] Check the tagged [GitHub Actions build](https://github.com/python/cherry-picker/actions/workflows/deploy.yml)
+      has deployed to [PyPI](https://pypi.org/project/cherry_picker/#history)
 
 - [ ] Check installation:
 
-```bash
-python -m pip uninstall -y cherry_picker && python -m pip install -U cherry_picker && cherry_picker --version
-```
+  ```bash
+  python -m pip uninstall -y cherry_picker && python -m pip install -U cherry_picker && cherry_picker --version
+  ```

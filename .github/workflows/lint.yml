@@ -26,4 +26,5 @@ jobs:
           # TODO: remove setuptools installation when safety==2.4.0 is released
           python -m pip install --upgrade safety setuptools
           python -m pip install --editable .
-      - run: safety check
+      # Ignore CVE-2023-5752, we're not using that pip or feature
+      - run: safety check --ignore 62044
