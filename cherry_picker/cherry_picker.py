@@ -153,7 +153,6 @@ class CherryPicker:
 
     def remember_previous_branch(self):
         """Save the current branch into Git config, to be used later."""
-        """
         current_branch = get_current_branch()
         save_cfg_vals_to_git_cfg(previous_branch=current_branch)
 
