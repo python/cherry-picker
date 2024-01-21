@@ -343,10 +343,13 @@ def test_get_pr_url(config):
     [
         b"git@github.com:mock_user/cpython.git",
         b"git@github.com:mock_user/cpython",
+        b"git@github.com:mock_user/cpython/",
         b"ssh://git@github.com/mock_user/cpython.git",
         b"ssh://git@github.com/mock_user/cpython",
+        b"ssh://git@github.com/mock_user/cpython/",
         b"https://github.com/mock_user/cpython.git",
         b"https://github.com/mock_user/cpython",
+        b"https://github.com/mock_user/cpython/",
     ],
 )
 def test_username(url, config):
