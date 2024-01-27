@@ -861,7 +861,7 @@ def validate_sha(sha):
 
     raises ValueError if the sha does not reference a commit within the repo
     """
-    cmd = ["git", "log", "-r", sha]
+    cmd = ["git", "log", "--max-count=1", "-r", sha]
     try:
         subprocess.check_output(cmd, stderr=subprocess.STDOUT)
     except subprocess.SubprocessError:
