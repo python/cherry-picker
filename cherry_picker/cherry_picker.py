@@ -803,8 +803,9 @@ def cherry_pick_cli(
             config=config,
             chosen_config_path=chosen_config_path,
         )
-    except InvalidRepoException:
-        click.echo(f"You're not inside a {config['repo']} repo right now! \U0001F645")
+    except InvalidRepoException as ire:
+        click.echo("Error validate sha")
+        click.echo(ire.args[0])
         sys.exit(-1)
     except ValueError as exc:
         ctx.fail(exc)
