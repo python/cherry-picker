@@ -1152,7 +1152,9 @@ Co-authored-by: Author Name <author@name.email>"""
         cherry_picker, "get_updated_commit_message", return_value=commit_message
     ) as get_updated_commit_message, mock.patch.object(
         cherry_picker, "checkout_branch"
-    ), mock.patch.object(cherry_picker, "fetch_upstream"), mock.patch.object(
+    ), mock.patch.object(
+        cherry_picker, "fetch_upstream"
+    ), mock.patch.object(
         cherry_picker, "cleanup_branch"
     ):
         cherry_picker.continue_cherry_pick()
