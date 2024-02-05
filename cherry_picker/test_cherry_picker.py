@@ -406,7 +406,10 @@ Date:   Thu Aug 9 14:25:15 1990 +0000
 
 def test_is_not_cpython_repo():
     # use default CPython sha to fail on this repo
-    with pytest.raises(InvalidRepoException):
+    with pytest.raises(
+        InvalidRepoException,
+        match=r"The sha listed in the branch name, \w+, is not present in the repository",
+    ):
         CherryPicker("origin", "22a594a0047d7706537ff2ac676cdc0f1dcb329c", ["3.6"])
 
 
@@ -1148,9 +1151,7 @@ Co-authored-by: Author Name <author@name.email>"""
         cherry_picker, "get_updated_commit_message", return_value=commit_message
     ) as get_updated_commit_message, mock.patch.object(
         cherry_picker, "checkout_branch"
-    ), mock.patch.object(
-        cherry_picker, "fetch_upstream"
-    ), mock.patch.object(
+    ), mock.patch.object(cherry_picker, "fetch_upstream"), mock.patch.object(
         cherry_picker, "cleanup_branch"
     ):
         cherry_picker.continue_cherry_pick()
