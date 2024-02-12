@@ -261,7 +261,12 @@ class CherryPicker:
             click.echo(err.output)
             raise CherryPickException(f"Error getting commit message for {commit_sha}")
         if self.config["fix_commit_msg"]:
-            return message.replace("#", "GH-")
+            # Only replace "#" with "GH-" with the following conditions:
+            # * "#" is separated from the previous word
+            # * "#" is followed by at least 5-digit number that
+            #   does not start with 0
+            # * the number is separated from the following word
+            return re.sub(r"\B#(?=[1-9][0-9]{4,}\b)", "GH-", message)
         else:
             return message
 
