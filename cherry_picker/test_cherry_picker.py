@@ -367,12 +367,16 @@ def test_get_updated_commit_message(config):
         "origin", "22a594a0047d7706537ff2ac676cdc0f1dcb329c", branches, config=config
     )
     with mock.patch(
-        "subprocess.check_output", return_value=b"bpo-123: Fix Spam Module (#113)"
+        "subprocess.check_output",
+        return_value=b"bpo-123: Fix#12345 #1234 #12345Number Sign (#01234) (#11345)",
     ):
         actual_commit_message = cp.get_commit_message(
             "22a594a0047d7706537ff2ac676cdc0f1dcb329c"
         )
-    assert actual_commit_message == "bpo-123: Fix Spam Module (GH-113)"
+    assert (
+        actual_commit_message
+        == "bpo-123: Fix#12345 #1234 #12345Number Sign (#01234) (GH-11345)"
+    )
 
 
 def test_get_updated_commit_message_without_links_replacement(config):
