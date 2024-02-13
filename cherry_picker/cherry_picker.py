@@ -330,12 +330,11 @@ To abort the cherry-pick and cleanup:
         """
         # Get the original commit message and prefix it with the branch name
         # if that's enabled.
-        commit_prefix = ""
+        updated_commit_message = self.get_commit_message(self.commit_sha1)
         if self.prefix_commit:
-            commit_prefix = f"[{get_base_branch(cherry_pick_branch)}] "
-        updated_commit_message = (
-            f"{commit_prefix}{self.get_commit_message(self.commit_sha1)}"
-        )
+            updated_commit_message = remove_commit_prefix(updated_commit_message)
+            base_branch = get_base_branch(cherry_pick_branch)
+            updated_commit_message = f"[{base_branch}] {updated_commit_message}"
 
         # Add '(cherry picked from commit ...)' to the message
         # and add new Co-authored-by trailer if necessary.
@@ -443,6 +442,7 @@ $ cherry_picker --abort
         request_headers = sansio.create_headers(self.username, oauth_token=gh_auth)
         title, body = normalize_commit_message(commit_message)
         if not self.prefix_commit:
+            title = remove_commit_prefix(title)
             title = f"[{base_branch}] {title}"
         data = {
             "title": title,
@@ -880,19 +880,10 @@ def version_from_branch(branch):
     """
     return version information from a git branch name
     """
-    try:
-        return tuple(
-            map(
-                int,
-                re.match(r"^.*(?P<version>\d+(\.\d+)+).*$", branch)
-                .groupdict()["version"]
-                .split("."),
-            )
-        )
-    except AttributeError as attr_err:
-        raise ValueError(
-            f"Branch {branch} seems to not have a version in its name."
-        ) from attr_err
+    m = re.search(r"\d+(?:\.\d+)+", branch)
+    if not m:
+        raise ValueError(f"Branch {branch} seems to not have a version in its name.")
+    return tuple(map(int, m[0].split(".")))
 
 
 def get_current_branch():
@@ -929,10 +920,19 @@ def normalize_commit_message(commit_message):
     """
     Return a tuple of title and body from the commit message
     """
-    split_commit_message = commit_message.split("\n")
-    title = split_commit_message[0]
-    body = "\n".join(split_commit_message[1:])
+    title, _, body = commit_message.partition("\n")
     return title, body.lstrip("\n")
+
+
+def remove_commit_prefix(commit_message):
+    """
+    Remove prefix "[X.Y] " from the commit message
+    """
+    while True:
+        m = re.match(r"\[\d+(?:\.\d+)+\] *", commit_message)
+        if not m:
+            return commit_message
+        commit_message = commit_message[m.end() :]
 
 
 def is_git_repo():

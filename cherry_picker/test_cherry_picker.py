@@ -30,6 +30,7 @@ from .cherry_picker import (
     load_config,
     load_val_from_git_cfg,
     normalize_commit_message,
+    remove_commit_prefix,
     reset_state,
     reset_stored_config_ref,
     set_state,
@@ -558,6 +559,22 @@ Co-authored-by: Elmar Ritsch <35851+elritsch@users.noreply.github.com>"""
     )
 
 
+def test_remove_commit_prefix():
+    assert (
+        remove_commit_prefix("[3.12] Fix something (GH-3113)")
+        == "Fix something (GH-3113)"
+    )
+    assert (
+        remove_commit_prefix("[3.11] [3.12] Fix something (GH-3113)")
+        == "Fix something (GH-3113)"
+    )
+    assert remove_commit_prefix("Fix something (GH-3113)") == "Fix something (GH-3113)"
+    assert (
+        remove_commit_prefix("[WIP] Fix something (GH-3113)")
+        == "[WIP] Fix something (GH-3113)"
+    )
+
+
 @pytest.mark.parametrize(
     "commit_message,expected_commit_message",
     (
@@ -625,6 +642,16 @@ In Sphinx 1.5.1+, it is now "index.rst.txt".
 
 Co-authored-by: PR Author <author@name.email>
 Co-authored-by: PR Co-Author <another@author.com>""",
+        ),
+        # ensure the existing commit prefix is replaced
+        (
+            "[3.7] [3.8] Fix broken `Show Source` links on documentation "
+            "pages (GH-3113) (GH-3114) (GH-3115)",
+            """[3.6] Fix broken `Show Source` links on documentation """
+            """pages (GH-3113) (GH-3114) (GH-3115)
+(cherry picked from commit b9ff498793611d1c6a9b99df464812931a1e2d69)
+
+Co-authored-by: PR Author <author@name.email>""",
         ),
     ),
 )
