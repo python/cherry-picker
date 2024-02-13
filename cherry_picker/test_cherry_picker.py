@@ -559,20 +559,17 @@ Co-authored-by: Elmar Ritsch <35851+elritsch@users.noreply.github.com>"""
     )
 
 
-def test_remove_commit_prefix():
-    assert (
-        remove_commit_prefix("[3.12] Fix something (GH-3113)")
-        == "Fix something (GH-3113)"
-    )
-    assert (
-        remove_commit_prefix("[3.11] [3.12] Fix something (GH-3113)")
-        == "Fix something (GH-3113)"
-    )
-    assert remove_commit_prefix("Fix something (GH-3113)") == "Fix something (GH-3113)"
-    assert (
-        remove_commit_prefix("[WIP] Fix something (GH-3113)")
-        == "[WIP] Fix something (GH-3113)"
-    )
+@pytest.mark.parametrize(
+    "commit_message, expected",
+    [
+        ("[3.12] Fix something (GH-3113)", "Fix something (GH-3113)"),
+        ("[3.11] [3.12] Fix something (GH-3113)", "Fix something (GH-3113)"),
+        ("Fix something (GH-3113)", "Fix something (GH-3113)"),
+        ("[WIP] Fix something (GH-3113)", "[WIP] Fix something (GH-3113)"),
+    ],
+)
+def test_remove_commit_prefix(commit_message, expected):
+    assert remove_commit_prefix(commit_message) == expected
 
 
 @pytest.mark.parametrize(
