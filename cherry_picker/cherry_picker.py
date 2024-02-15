@@ -306,7 +306,7 @@ class CherryPicker:
             click.echo(self.run_cmd(cmd))
         except subprocess.CalledProcessError as err:
             click.echo(f"Error cherry-pick {self.commit_sha1}.")
-            click.echo(err.output)
+            click.secho(err.output, fg=(128, 128, 128))
             raise CherryPickException(f"Error cherry-pick {self.commit_sha1}.")
 
     def get_exit_message(self, branch):
@@ -387,7 +387,7 @@ To abort the cherry-pick and cleanup:
         return updated_commit_message
 
     def pause_after_committing(self, cherry_pick_branch):
-        click.echo(
+        click.secho(
             f"""
 Finished cherry-pick {self.commit_sha1} into {cherry_pick_branch} \U0001F600
 --no-push option used.
@@ -397,7 +397,8 @@ $ cherry_picker --continue
 
 To abort the cherry-pick and cleanup:
 $ cherry_picker --abort
-"""
+""",
+            fg="red"
         )
         self.set_paused_state()
 
@@ -468,8 +469,8 @@ $ cherry_picker --abort
         if self.dry_run:
             click.echo(f"  dry-run: Create new PR: {url}")
         else:
-            click.echo("Backport PR URL:")
-            click.echo(url)
+            click.secho("Backport PR URL:", fg="red")
+            click.secho(url, fg="red")
             webbrowser.open_new_tab(url)
 
     def delete_branch(self, branch):
@@ -530,9 +531,9 @@ $ cherry_picker --abort
                 commit_message = self.amend_commit_message(cherry_pick_branch)
             except subprocess.CalledProcessError as cpe:
                 click.echo(cpe.output)
-                click.echo(self.get_exit_message(maint_branch))
+                click.secho(self.get_exit_message(maint_branch), fg="red")
             except CherryPickException:
-                click.echo(self.get_exit_message(maint_branch))
+                click.secho(self.get_exit_message(maint_branch), fg="red")
                 self.set_paused_state()
                 raise
             else:
