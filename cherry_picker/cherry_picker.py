@@ -398,8 +398,7 @@ $ cherry_picker --continue
 To abort the cherry-pick and cleanup:
 $ cherry_picker --abort
 """,
-            fg="red"
-        )
+            fg="red")
         self.set_paused_state()
 
     def push_to_remote(self, base_branch, head_branch, commit_message=""):
