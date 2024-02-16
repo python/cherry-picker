@@ -109,6 +109,7 @@ class CherryPicker:
         config=DEFAULT_CONFIG,
         chosen_config_path=None,
         auto_pr=True,
+        use_color=True,
     ):
         self.chosen_config_path = chosen_config_path
         """The config reference used in the current runtime.
@@ -137,6 +138,13 @@ class CherryPicker:
         self.push = push
         self.auto_pr = auto_pr
         self.prefix_commit = prefix_commit
+
+        if use_color and os.environ.get("NO_COLOR") is None:
+            self.dim = (128, 128, 128)
+            self.bright = "red"
+        else:
+            self.dim = "black"
+            self.bright = "black"
 
         # the cached calculated value of self.upstream property
         self._upstream = None
@@ -306,7 +314,7 @@ class CherryPicker:
             click.echo(self.run_cmd(cmd))
         except subprocess.CalledProcessError as err:
             click.echo(f"Error cherry-pick {self.commit_sha1}.")
-            click.secho(err.output, fg=(128, 128, 128))
+            click.secho(err.output, fg=self.dim)
             raise CherryPickException(f"Error cherry-pick {self.commit_sha1}.")
 
     def get_exit_message(self, branch):
@@ -398,7 +406,7 @@ $ cherry_picker --continue
 To abort the cherry-pick and cleanup:
 $ cherry_picker --abort
 """,
-            fg="red",
+            fg=self.bright,
         )
         self.set_paused_state()
 
@@ -469,8 +477,8 @@ $ cherry_picker --abort
         if self.dry_run:
             click.echo(f"  dry-run: Create new PR: {url}")
         else:
-            click.secho("Backport PR URL:", fg="red")
-            click.secho(url, fg="red")
+            click.secho("Backport PR URL:", fg=self.bright)
+            click.secho(url, fg=self.bright)
             webbrowser.open_new_tab(url)
 
     def delete_branch(self, branch):
@@ -531,9 +539,9 @@ $ cherry_picker --abort
                 commit_message = self.amend_commit_message(cherry_pick_branch)
             except subprocess.CalledProcessError as cpe:
                 click.echo(cpe.output)
-                click.secho(self.get_exit_message(maint_branch), fg="red")
+                click.secho(self.get_exit_message(maint_branch), fg=self.bright)
             except CherryPickException:
-                click.secho(self.get_exit_message(maint_branch), fg="red")
+                click.secho(self.get_exit_message(maint_branch), fg=self.bright)
                 self.set_paused_state()
                 raise
             else:
@@ -777,6 +785,16 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 )
 @click.argument("commit_sha1", nargs=1, default="")
 @click.argument("branches", nargs=-1)
+@click.option(
+    "--color/--no-color",
+    "color",
+    is_flag=True,
+    default=True,
+    help=(
+        "If color display is enabled, cherry-picker will use color to distinguish"
+        " its output from that of 'git cherry-pick'."
+    ),
+)
 @click.pass_context
 def cherry_pick_cli(
     ctx,
@@ -790,6 +808,7 @@ def cherry_pick_cli(
     config_path,
     commit_sha1,
     branches,
+    color,
 ):
     """cherry-pick COMMIT_SHA1 into target BRANCHES."""
 
@@ -808,6 +827,7 @@ def cherry_pick_cli(
             auto_pr=auto_pr,
             config=config,
             chosen_config_path=chosen_config_path,
+            use_color=color,
         )
     except InvalidRepoException:
         click.echo(f"You're not inside a {config['repo']} repo right now! \U0001F645")
