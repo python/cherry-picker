@@ -77,6 +77,8 @@ WORKFLOW_STATES = enum.Enum(
     """,
 )
 
+BRIGHT = "red"
+DIM = "0x808080"
 
 class BranchCheckoutException(Exception):
     def __init__(self, branch_name):
@@ -110,6 +112,8 @@ class CherryPicker:
         chosen_config_path=None,
         auto_pr=True,
         use_color=True,
+        bright=None,
+        dim=None,
     ):
         self.chosen_config_path = chosen_config_path
         """The config reference used in the current runtime.
@@ -138,13 +142,15 @@ class CherryPicker:
         self.push = push
         self.auto_pr = auto_pr
         self.prefix_commit = prefix_commit
+        self.dim = None
+        self.bright = None
 
         if use_color and os.environ.get("NO_COLOR") is None:
-            self.dim = (128, 128, 128)
-            self.bright = "red"
-        else:
-            self.dim = "black"
-            self.bright = "black"
+            self.dim = DIM if dim is None else dim
+            self.bright = BRIGHT if bright is None else bright
+
+        self.dim = normalize_color(self.dim)
+        self.bright = normalize_color(self.bright)
 
         # the cached calculated value of self.upstream property
         self._upstream = None
@@ -791,8 +797,27 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     is_flag=True,
     default=True,
     help=(
-        "If color display is enabled, cherry-picker will use color to distinguish"
-        " its output from that of 'git cherry-pick'."
+        "If color display is enabled (the default), cherry-picker will use color to"
+        " distinguish its output from that of 'git cherry-pick'. Color display can"
+        " also be suppressed by setting NO_COLOR environment variable to non-empty value."
+    ),
+)
+@click.option(
+    "--bright",
+    "bright",
+    default=BRIGHT,
+    help=(
+        "Foreground color for bright text (from cherry_picker). Can be color name,"
+        " RGB hex string ('0xRRGGBB' or '0xRGB') or tuple of ints ('44, 88, 255)'"
+    ),
+)
+@click.option(
+    "--dim",
+    "dim",
+    default=DIM,
+    help=(
+        "Foreground color for dim text (from git cherry-pick). Can be color name,"
+        " RGB hex string ('0xRRGGBB' or '0xRGB') or tuple of ints ('44, 88, 255)'"
     ),
 )
 @click.pass_context
@@ -809,6 +834,8 @@ def cherry_pick_cli(
     commit_sha1,
     branches,
     color,
+    bright,
+    dim,
 ):
     """cherry-pick COMMIT_SHA1 into target BRANCHES."""
 
@@ -828,6 +855,8 @@ def cherry_pick_cli(
             config=config,
             chosen_config_path=chosen_config_path,
             use_color=color,
+            bright=bright,
+            dim=dim,
         )
     except InvalidRepoException:
         click.echo(f"You're not inside a {config['repo']} repo right now! \U0001F645")
@@ -1090,6 +1119,58 @@ def from_git_rev_read(path):
 
 def get_state_from_string(state_str):
     return WORKFLOW_STATES.__members__[state_str]
+
+
+def normalize_color(color):
+    """Produce colors in Click's format from strings.
+
+    Supported formats are:
+
+    * color names understood by Click. See:
+        https://click.palletsprojects.com/en/8.1.x/api/#click.style
+    * RGB values of the form 0xRRGGBB or 0xRGB.
+    * Tuple of ints (base 10), must have leading and trailing parens,
+      and values separated by commas, e.g., "( 44, 88, 255)".
+
+    """
+
+    if color is None:
+        return color
+
+    color = color.strip().lower()
+
+    if color.lower().startswith("0x"):
+        # Assume it's a hex string and convert it to Click's tuple of ints
+        # form.  It's kind of surprising Click doesn't support hex strings
+        # directly.
+        match len(color):
+            case 8:
+                # assume six-digit hex, 0xRRGGBB
+                return (
+                    int(color[2:4], 16),
+                    int(color[4:6], 16),
+                    int(color[6:8], 16),
+                    )
+            case 5:
+                # assume three-digit hex, 0xRGB
+                return (
+                    int(color[2], 16) * 16,
+                    int(color[3], 16) * 16,
+                    int(color[4], 16) * 16,
+                    )
+            case _:
+                raise ValueError(f"unrecognized hex string: {color}")
+
+    if color[0] == "(" and color[-1] == ")":
+        # let's hope it's a tuple of ints...
+        try:
+            red, green, blue = [int(x.strip()) for x in color[1:-1].split(",")]
+        except ValueError as exc:
+            raise ValueError(f"unrecognized tuple of ints string: {color}") from exc
+        return (red, green, blue)
+
+    # fallback is to assume it's a color name supported by click.
+    return color
 
 
 if __name__ == "__main__":
