@@ -11,6 +11,7 @@ import sys
 import webbrowser
 
 import click
+from click.termui import _ansi_colors as color_names
 import requests
 from gidgethub import sansio
 
@@ -1170,7 +1171,9 @@ def normalize_color(color):
         return (red, green, blue)
 
     # fallback is to assume it's a color name supported by click.
-    return color
+    if color in color_names:
+        return color
+    raise ValueError(f"unrecognized color: '{color}'")
 
 
 if __name__ == "__main__":
