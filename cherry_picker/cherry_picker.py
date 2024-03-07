@@ -92,6 +92,10 @@ class InvalidRepoException(Exception):
     pass
 
 
+class GitCommandFailedException(Exception):
+    pass
+
+
 class CherryPicker:
     ALLOWED_STATES = WORKFLOW_STATES.BACKPORT_PAUSED, WORKFLOW_STATES.UNSET
     """The list of states expected at the start of the app."""
@@ -794,9 +798,8 @@ def cherry_pick_cli(
 
     click.echo("\U0001F40D \U0001F352 \u26CF")
 
-    chosen_config_path, config = load_config(config_path)
-
     try:
+        chosen_config_path, config = load_config(config_path)
         cherry_picker = CherryPicker(
             pr_remote,
             commit_sha1,
@@ -808,6 +811,9 @@ def cherry_pick_cli(
             config=config,
             chosen_config_path=chosen_config_path,
         )
+    except GitCommandFailedException as exc:
+        click.echo(exc)
+        sys.exit(-1)
     except InvalidRepoException:
         click.echo(f"You're not inside a {config['repo']} repo right now! \U0001F645")
         sys.exit(-1)
@@ -994,7 +1000,10 @@ def load_config(path=None):
 def get_sha1_from(commitish):
     """Turn 'commitish' into its sha1 hash."""
     cmd = ["git", "rev-parse", commitish]
-    return subprocess.check_output(cmd).strip().decode("utf-8")
+    proc = subprocess.run(cmd, capture_output=True)
+    if proc.returncode != 0:
+        raise GitCommandFailedException(proc.stderr.strip().decode("utf-8"))
+    return proc.stdout.strip().decode("utf-8")
 
 
 def reset_stored_config_ref():
