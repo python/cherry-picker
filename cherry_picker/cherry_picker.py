@@ -1160,20 +1160,20 @@ def normalize_color(color):
                     int(color[4], 16) * 16,
                     )
             case _:
-                raise ValueError(f"unrecognized hex string: {color}")
+                raise ValueError(f"unrecognized hex string: {color!r}")
 
     if color[0] == "(" and color[-1] == ")":
         # let's hope it's a tuple of ints...
         try:
             red, green, blue = [int(x.strip()) for x in color[1:-1].split(",")]
         except ValueError as exc:
-            raise ValueError(f"unrecognized tuple of ints string: {color}") from exc
+            raise ValueError(f"unrecognized tuple of ints string: {color!r}") from exc
         return (red, green, blue)
 
     # fallback is to assume it's a color name supported by click.
     if color in color_names:
         return color
-    raise ValueError(f"unrecognized color: '{color}'")
+    raise ValueError(f"unrecognized color: '{color!r}'")
 
 
 if __name__ == "__main__":
