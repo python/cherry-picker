@@ -1144,23 +1144,22 @@ def normalize_color(color):
         # Assume it's a hex string and convert it to Click's tuple of ints
         # form.  It's kind of surprising Click doesn't support hex strings
         # directly.
-        match len(color):
-            case 8:
-                # assume six-digit hex, 0xRRGGBB
-                return (
-                    int(color[2:4], 16),
-                    int(color[4:6], 16),
-                    int(color[6:8], 16),
-                    )
-            case 5:
-                # assume three-digit hex, 0xRGB
-                return (
-                    int(color[2], 16) * 16,
-                    int(color[3], 16) * 16,
-                    int(color[4], 16) * 16,
-                    )
-            case _:
-                raise ValueError(f"unrecognized hex string: {color!r}")
+        if len(color) == 8:
+            # assume six-digit hex, 0xRRGGBB
+            return (
+                int(color[2:4], 16),
+                int(color[4:6], 16),
+                int(color[6:8], 16),
+                )
+        elif len(color) == 5:
+            # assume three-digit hex, 0xRGB
+            return (
+                int(color[2], 16) * 16,
+                int(color[3], 16) * 16,
+                int(color[4], 16) * 16,
+                )
+        else:
+            raise ValueError(f"unrecognized hex string: {color!r}")
 
     if color[0] == "(" and color[-1] == ")":
         # let's hope it's a tuple of ints...
