@@ -32,6 +32,8 @@ DEFAULT_CONFIG = collections.ChainMap(
         "check_sha": "7f777ed95a19224294949e1b4ce56bbffcb1fe9f",
         "fix_commit_msg": True,
         "default_branch": "main",
+        "bright": "red",
+        "dim": "0x808080",
     }
 )
 
@@ -78,9 +80,6 @@ WORKFLOW_STATES = enum.Enum(
     """,
 )
 
-BRIGHT = "red"
-DIM = "0x808080"
-
 class BranchCheckoutException(Exception):
     def __init__(self, branch_name):
         self.branch_name = branch_name
@@ -113,8 +112,6 @@ class CherryPicker:
         chosen_config_path=None,
         auto_pr=True,
         use_color=True,
-        bright=None,
-        dim=None,
     ):
         self.chosen_config_path = chosen_config_path
         """The config reference used in the current runtime.
@@ -143,12 +140,11 @@ class CherryPicker:
         self.push = push
         self.auto_pr = auto_pr
         self.prefix_commit = prefix_commit
-        self.dim = None
-        self.bright = None
+        self.dim = config["dim"]
+        self.bright = config["bright"]
 
-        if use_color and os.environ.get("NO_COLOR") is None:
-            self.dim = DIM if dim is None else dim
-            self.bright = BRIGHT if bright is None else bright
+        if not use_color or os.environ.get("NO_COLOR") is not None:
+            self.dim = self.bright = None
 
         self.dim = normalize_color(self.dim)
         self.bright = normalize_color(self.bright)
@@ -803,24 +799,8 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
         " also be suppressed by setting NO_COLOR environment variable to non-empty value."
     ),
 )
-@click.option(
-    "--bright",
-    "bright",
-    default=BRIGHT,
-    help=(
-        "Foreground color for bright text (from cherry_picker). Can be color name,"
-        " RGB hex string ('0xRRGGBB' or '0xRGB') or tuple of ints ('44, 88, 255)'"
-    ),
-)
-@click.option(
-    "--dim",
-    "dim",
-    default=DIM,
-    help=(
-        "Foreground color for dim text (from git cherry-pick). Can be color name,"
-        " RGB hex string ('0xRRGGBB' or '0xRGB') or tuple of ints ('44, 88, 255)'"
-    ),
-)
+@click.argument("bright", nargs=1)
+@click.argument("dim", nargs=1)
 @click.pass_context
 def cherry_pick_cli(
     ctx,
@@ -856,8 +836,6 @@ def cherry_pick_cli(
             config=config,
             chosen_config_path=chosen_config_path,
             use_color=color,
-            bright=bright,
-            dim=dim,
         )
     except InvalidRepoException:
         click.echo(f"You're not inside a {config['repo']} repo right now! \U0001F645")

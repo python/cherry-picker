@@ -456,6 +456,8 @@ def test_load_full_config(tmp_git_repo_dir, git_add, git_commit):
             "team": "python",
             "fix_commit_msg": True,
             "default_branch": "devel",
+            "bright": "red",
+            "dim": "0x808080",
         },
     )
 
@@ -479,6 +481,8 @@ def test_load_partial_config(tmp_git_repo_dir, git_add, git_commit):
             "team": "python",
             "fix_commit_msg": True,
             "default_branch": "main",
+            "bright": "red",
+            "dim": "0x808080",
         },
     )
 
@@ -507,6 +511,8 @@ def test_load_config_no_head_sha(tmp_git_repo_dir, git_add, git_commit):
             "team": "python",
             "fix_commit_msg": True,
             "default_branch": "devel",
+            "bright": "red",
+            "dim": "0x808080",
         },
     )
 
