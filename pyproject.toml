@@ -7,7 +7,7 @@ requires = [
 
 [project]
 name = "cherry-picker"
-readme = "readme.rst"
+readme = "README.md"
 maintainers = [{ name = "Python Core Developers", email = "core-workflow@python.org" }]
 authors = [{ name = "Mariatta Wijaya", email = "mariatta@python.org" }]
 requires-python = ">=3.8"
