@@ -23,8 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip wheel
-          # TODO: remove setuptools installation when safety==2.4.0 is released
-          python -m pip install --upgrade safety setuptools
+          python -m pip install --upgrade safety
           python -m pip install --editable .
       # Ignore 70612 / CVE-2019-8341, Jinja2 is a safety dep, not ours
       - run: safety check --ignore 70612
