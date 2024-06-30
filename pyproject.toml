@@ -27,7 +27,7 @@ dynamic = [
   "version",
 ]
 dependencies = [
-  "cffi>=v1.17.0rc1",  # remove this once v1.17.0 is out (see #127)
+  "cffi>=v1.17.0rc1", # remove this once v1.17.0 is out (see #127)
   "click>=6",
   "gidgethub",
   "requests",
