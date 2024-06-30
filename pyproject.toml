@@ -31,7 +31,7 @@ dependencies = [
   "gidgethub",
   "requests",
   # the cffi dep is needed for 3.13, but only a compatible rc is available
-  "cffi==v1.17.0rc1",  # remove this once v1.17.0 is out
+  "cffi>=v1.17.0rc1",  # remove this once v1.17.0 is out
   'tomli>=1.1; python_version < "3.11"',
 ]
 [project.optional-dependencies]
