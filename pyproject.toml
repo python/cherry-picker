@@ -26,6 +26,7 @@ dynamic = [
   "version",
 ]
 dependencies = [
+  "cffi>=v1.17.0rc1", # remove once v1.17.0 is out; add 3.13 classifier above (see #127)
   "click>=6",
   "gidgethub",
   "requests",
