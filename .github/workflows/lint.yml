@@ -25,6 +25,5 @@ jobs:
           python -m pip install --upgrade pip wheel
           python -m pip install --upgrade safety
           python -m pip install --editable .
-      # Ignore 62044 / CVE-2023-5752, we're not using that pip or feature
       # Ignore 70612 / CVE-2019-8341, Jinja2 is a safety dep, not ours
-      - run: safety check --ignore 62044 --ignore 70612
+      - run: safety check --ignore 70612
