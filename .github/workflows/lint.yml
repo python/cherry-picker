@@ -26,4 +26,5 @@ jobs:
           # TODO: remove setuptools installation when safety==2.4.0 is released
           python -m pip install --upgrade safety setuptools
           python -m pip install --editable .
-      - run: safety check
+      # Ignore 70612 / CVE-2019-8341, Jinja2 is a safety dep, not ours
+      - run: safety check --ignore 70612
