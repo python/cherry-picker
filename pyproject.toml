@@ -20,13 +20,13 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
 ]
 dynamic = [
   "description",
   "version",
 ]
 dependencies = [
-  "cffi>=1.17.0rc1",                   # remove once v1.17.0 is out; add 3.13 classifier above (see #127)
   "click>=6",
   "gidgethub",
   "requests",
@@ -49,3 +49,6 @@ local_scheme = "no-local-version"
 
 [tool.isort]
 profile = "black"
+
+[tool.pyproject-fmt]
+max_supported_python = "3.13"
