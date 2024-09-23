@@ -78,6 +78,11 @@ repos:
     hooks:
       - id: validate-pyproject
 
+  - repo: https://github.com/tox-dev/tox-ini-fmt
+    rev: 1.4.1
+    hooks:
+      - id: tox-ini-fmt
+
   - repo: https://github.com/codespell-project/codespell
     rev: v2.3.0
     hooks:
