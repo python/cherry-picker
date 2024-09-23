@@ -47,8 +47,26 @@ tag-pattern = '^cherry-picker-(?P<version>[vV]?\d+(?:\.\d+){0,2}[^\+]*)(?:\+.*)?
 [tool.hatch.version.raw-options]
 local_scheme = "no-local-version"
 
-[tool.isort]
-profile = "black"
+[tool.ruff]
+fix = true
+
+lint.select = [
+  "C4",  # flake8-comprehensions
+  "ISC", # flake8-implicit-str-concat
+  "LOG", # flake8-logging
+  "PGH", # pygrep-hooks
+  "S",   # flake8-bandit
+  "YTT", # flake8-2020
+]
+
+lint.ignore = [
+  "S101", # Use of assert detected
+  "S404", # subprocess module is possibly insecure
+  "S603", # subprocess call: check for execution of untrusted input
+]
+lint.per-file-ignores."cherry_picker/test_*.py" = [
+  "S101", # Asserts allowed in tests
+]
 
 [tool.pyproject-fmt]
 max_supported_python = "3.13"
