@@ -8,8 +8,8 @@ requires = [
 [project]
 name = "cherry-picker"
 readme = "README.md"
-maintainers = [{ name = "Python Core Developers", email = "core-workflow@python.org" }]
-authors = [{ name = "Mariatta Wijaya", email = "mariatta@python.org" }]
+maintainers = [ { name = "Python Core Developers", email = "core-workflow@python.org" } ]
+authors = [ { name = "Mariatta Wijaya", email = "mariatta@python.org" } ]
 requires-python = ">=3.8"
 classifiers = [
   "Intended Audience :: Developers",
@@ -26,21 +26,18 @@ dynamic = [
   "version",
 ]
 dependencies = [
-  "cffi>=v1.17.0rc1", # remove once v1.17.0 is out; add 3.13 classifier above (see #127)
+  "cffi>=1.17.0rc1",                   # remove once v1.17.0 is out; add 3.13 classifier above (see #127)
   "click>=6",
   "gidgethub",
   "requests",
-  'tomli>=1.1; python_version < "3.11"',
+  "tomli>=1.1; python_version<'3.11'",
 ]
-[project.optional-dependencies]
-dev = [
+optional-dependencies.dev = [
   "pytest",
   "pytest-cov",
 ]
-[project.urls]
-"Homepage" = "https://github.com/python/cherry-picker"
-[project.scripts]
-cherry_picker = "cherry_picker.cherry_picker:cherry_pick_cli"
+urls.Homepage = "https://github.com/python/cherry-picker"
+scripts.cherry_picker = "cherry_picker.cherry_picker:cherry_pick_cli"
 
 [tool.hatch.version]
 source = "vcs"
