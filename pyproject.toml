@@ -51,14 +51,22 @@ local_scheme = "no-local-version"
 fix = true
 
 lint.select = [
-  "C4",  # flake8-comprehensions
-  "ISC", # flake8-implicit-str-concat
-  "LOG", # flake8-logging
-  "PGH", # pygrep-hooks
-  "S",   # flake8-bandit
-  "YTT", # flake8-2020
+  "C4",     # flake8-comprehensions
+  "E",      # pycodestyle errors
+  "F",      # pyflakes errors
+  "I",      # isort
+  "ICN",    # flake8-import-conventions
+  "ISC",    # flake8-implicit-str-concat
+  "LOG",    # flake8-logging
+  "PGH",    # pygrep-hooks
+  "PYI",    # flake8-pyi
+  "RUF022", # unsorted-dunder-all
+  "RUF100", # unused noqa (yesqa)
+  "S",      # flake8-bandit
+  "UP",     # pyupgrade
+  "W",      # pycodestyle warnings
+  "YTT",    # flake8-2020
 ]
-
 lint.ignore = [
   "S101", # Use of assert detected
   "S404", # subprocess module is possibly insecure
