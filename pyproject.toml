@@ -72,9 +72,6 @@ lint.ignore = [
   "S404", # subprocess module is possibly insecure
   "S603", # subprocess call: check for execution of untrusted input
 ]
-lint.per-file-ignores."cherry_picker/test_*.py" = [
-  "S101", # Asserts allowed in tests
-]
 lint.isort.required-imports = [ "from __future__ import annotations" ]
 
 [tool.pyproject-fmt]
