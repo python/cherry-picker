@@ -196,7 +196,7 @@ class CherryPicker:
     @property
     def username(self):
         cmd = ["git", "config", "--get", f"remote.{self.pr_remote}.url"]
-        result = self.run_cmd(cmd, required_real_result=True)
+        result = self.run_cmd(cmd, required_real_result=True).strip()
         # implicit ssh URIs use : to separate host from user, others just use /
         username = result.replace(":", "/").rstrip("/").split("/")[-2]
         return username
@@ -702,7 +702,7 @@ $ cherry_picker --abort
         return out.startswith("true")
 
 
-CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
+CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 
 
 @click.command(context_settings=CONTEXT_SETTINGS)

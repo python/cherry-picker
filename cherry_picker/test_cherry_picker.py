@@ -351,6 +351,10 @@ def test_get_pr_url(config):
         b"https://github.com/mock_user/cpython.git",
         b"https://github.com/mock_user/cpython",
         b"https://github.com/mock_user/cpython/",
+        # test trailing whitespace
+        b"https://github.com/mock_user/cpython.git\n",
+        b"https://github.com/mock_user/cpython\n",
+        b"https://github.com/mock_user/cpython/\n",
     ],
 )
 def test_username(url, config):
