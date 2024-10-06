@@ -11,6 +11,9 @@ on:
 permissions:
   contents: read
 
+env:
+  FORCE_COLOR: 1
+
 jobs:
   # Always build & lint package.
   build-package:
@@ -47,6 +50,7 @@ jobs:
       - name: Publish to Test PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
+          attestations: true
           repository-url: https://test.pypi.org/legacy/
 
   # Publish to PyPI on GitHub Releases.
@@ -71,3 +75,5 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          attestations: true

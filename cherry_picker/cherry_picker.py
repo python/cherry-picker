@@ -36,7 +36,7 @@ DEFAULT_CONFIG = collections.ChainMap(
 
 
 WORKFLOW_STATES = enum.Enum(
-    "Workflow states",
+    "WORKFLOW_STATES",
     """
     FETCHING_UPSTREAM
     FETCHED_UPSTREAM
