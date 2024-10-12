@@ -43,6 +43,9 @@ source = "vcs"
 # Change regex to match tags like "cherry-picker-v2.2.0".
 tag-pattern = '^cherry-picker-(?P<version>[vV]?\d+(?:\.\d+){0,2}[^\+]*)(?:\+.*)?$'
 
+[tool.hatch.build.hooks.vcs]
+version-file = "cherry_picker/_version.py"
+
 [tool.hatch.version.raw-options]
 local_scheme = "no-local-version"
 
