@@ -7,6 +7,7 @@ requires = [
 
 [project]
 name = "cherry-picker"
+description = "Backport CPython changes from main to maintenance branches"
 readme = "README.md"
 maintainers = [ { name = "Python Core Developers", email = "core-workflow@python.org" } ]
 authors = [ { name = "Mariatta Wijaya", email = "mariatta@python.org" } ]
@@ -21,10 +22,7 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
 ]
-dynamic = [
-  "description",
-  "version",
-]
+dynamic = [ "version" ]
 dependencies = [
   "click>=6",
   "gidgethub",
@@ -51,7 +49,6 @@ local_scheme = "no-local-version"
 
 [tool.ruff]
 fix = true
-
 lint.select = [
   "C4",     # flake8-comprehensions
   "E",      # pycodestyle errors
