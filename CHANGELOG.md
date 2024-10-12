@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.3.0
+
+- Add support for Python 3.13
+  ([PR 127](https://github.com/python/cherry-picker/pull/127),
+  [PR 134](https://github.com/python/cherry-picker/pull/134))
+- Drop support for EOL Python 3.8
+  ([PR 133](https://github.com/python/cherry-picker/pull/133),
+  [PR 137](https://github.com/python/cherry-picker/pull/137))
+- Resolve usernames when the remote ends with a trailing slash ([PR 110](https://github.com/python/cherry-picker/pull/110))
+- Optimize `validate_sha()` with `--max-count=1` ([PR 111](https://github.com/python/cherry-picker/pull/111))
+- Make # replacing more strict ([PR 115](https://github.com/python/cherry-picker/pull/115))
+- Remove multiple commit prefixes ([PR 118](https://github.com/python/cherry-picker/pull/118))
+- Handle whitespace when calculating usernames ([PR 132](https://github.com/python/cherry-picker/pull/132))
+- Publish to PyPI using Trusted Publishers ([PR 94](https://github.com/python/cherry-picker/pull/94))
+- Generate digital attestations for PyPI ([PEP 740](https://peps.python.org/pep-0740/))
+  ([PR 135](https://github.com/python/cherry-picker/pull/135))
+
 ## 2.2.0
 
 - Add log messages
