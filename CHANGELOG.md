@@ -14,7 +14,8 @@
 - Remove multiple commit prefixes ([PR 118](https://github.com/python/cherry-picker/pull/118))
 - Handle whitespace when calculating usernames ([PR 132](https://github.com/python/cherry-picker/pull/132))
 - Publish to PyPI using Trusted Publishers ([PR 94](https://github.com/python/cherry-picker/pull/94))
-- Generate digital attestations for PyPI (PEP 740) ([PR 135](https://github.com/python/cherry-picker/pull/135))
+- Generate digital attestations for PyPI ([PEP 740](https://peps.python.org/pep-0740/))
+  ([PR 135](https://github.com/python/cherry-picker/pull/135))
 
 ## 2.2.0
 
