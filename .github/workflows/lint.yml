@@ -1,0 +1,29 @@
+name: Lint
+
+on: [push, pull_request, workflow_dispatch]
+
+env:
+  FORCE_COLOR: 1
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+          cache: pip
+          cache-dependency-path: .github/workflows/lint.yml
+      - uses: pre-commit/action@v3.0.1
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip wheel
+          python -m pip install --upgrade safety
+          python -m pip install --editable .
+      # Ignore 70612 / CVE-2019-8341, Jinja2 is a safety dep, not ours
+      - run: safety check --ignore 70612

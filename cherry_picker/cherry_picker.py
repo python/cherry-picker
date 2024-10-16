@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import collections
 import enum
 import functools
@@ -36,7 +38,7 @@ DEFAULT_CONFIG = collections.ChainMap(
 
 
 WORKFLOW_STATES = enum.Enum(
-    "Workflow states",
+    "WORKFLOW_STATES",
     """
     FETCHING_UPSTREAM
     FETCHED_UPSTREAM
@@ -93,7 +95,6 @@ class InvalidRepoException(Exception):
 
 
 class CherryPicker:
-
     ALLOWED_STATES = WORKFLOW_STATES.BACKPORT_PAUSED, WORKFLOW_STATES.UNSET
     """The list of states expected at the start of the app."""
 
@@ -111,7 +112,6 @@ class CherryPicker:
         chosen_config_path=None,
         auto_pr=True,
     ):
-
         self.chosen_config_path = chosen_config_path
         """The config reference used in the current runtime.
 
@@ -122,7 +122,6 @@ class CherryPicker:
         self.config = config
         self.check_repo()  # may raise InvalidRepoException
 
-        self.initial_state = self.get_state_and_verify()
         """The runtime state loaded from the config.
 
         Used to verify that we resume the process from the valid
@@ -155,7 +154,7 @@ class CherryPicker:
         set_state(WORKFLOW_STATES.BACKPORT_PAUSED)
 
     def remember_previous_branch(self):
-        """Save the current branch into Git config to be able to get back to it later."""
+        """Save the current branch into Git config, to be used later."""
         current_branch = get_current_branch()
         save_cfg_vals_to_git_cfg(previous_branch=current_branch)
 
@@ -164,7 +163,8 @@ class CherryPicker:
         """Get the remote name to use for upstream branches
 
         Uses the remote passed to `--upstream-remote`.
-        If this flag wasn't passed, it uses "upstream" if it exists or "origin" otherwise.
+        If this flag wasn't passed, it uses "upstream" if it exists or "origin"
+        otherwise.
         """
         # the cached calculated value of the property
         if self._upstream is not None:
@@ -175,7 +175,7 @@ class CherryPicker:
             cmd[-1] = self.upstream_remote
 
         try:
-            self.run_cmd(cmd)
+            self.run_cmd(cmd, required_real_result=True)
         except subprocess.CalledProcessError:
             if self.upstream_remote is not None:
                 raise ValueError(f"There is no remote with name {cmd[-1]!r}.")
@@ -200,16 +200,19 @@ class CherryPicker:
     @property
     def username(self):
         cmd = ["git", "config", "--get", f"remote.{self.pr_remote}.url"]
-        result = self.run_cmd(cmd)
+        result = self.run_cmd(cmd, required_real_result=True).strip()
         # implicit ssh URIs use : to separate host from user, others just use /
-        username = result.replace(":", "/").split("/")[-2]
+        username = result.replace(":", "/").rstrip("/").split("/")[-2]
         return username
 
     def get_cherry_pick_branch(self, maint_branch):
         return f"backport-{self.commit_sha1[:7]}-{maint_branch}"
 
     def get_pr_url(self, base_branch, head_branch):
-        return f"https://github.com/{self.config['team']}/{self.config['repo']}/compare/{base_branch}...{self.username}:{head_branch}?expand=1"
+        return (
+            f"https://github.com/{self.config['team']}/{self.config['repo']}"
+            f"/compare/{base_branch}...{self.username}:{head_branch}?expand=1"
+        )
 
     def fetch_upstream(self):
         """git fetch <upstream>"""
@@ -218,9 +221,9 @@ class CherryPicker:
         self.run_cmd(cmd)
         set_state(WORKFLOW_STATES.FETCHED_UPSTREAM)
 
-    def run_cmd(self, cmd):
+    def run_cmd(self, cmd, required_real_result=False):
         assert not isinstance(cmd, str)
-        if self.dry_run:
+        if not required_real_result and self.dry_run:
             click.echo(f"  dry-run: {' '.join(cmd)}")
             return
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
@@ -243,11 +246,11 @@ class CherryPicker:
         try:
             self.run_cmd(cmd)
         except subprocess.CalledProcessError as err:
-            click.echo(
-                f"Error checking out the branch {checked_out_branch!r}."
-            )
+            click.echo(f"Error checking out the branch {checked_out_branch!r}.")
             click.echo(err.output)
             raise BranchCheckoutException(checked_out_branch)
+        if create_branch:
+            self.unset_upstream(checked_out_branch)
 
     def get_commit_message(self, commit_sha):
         """
@@ -256,13 +259,18 @@ class CherryPicker:
         """
         cmd = ["git", "show", "-s", "--format=%B", commit_sha]
         try:
-            message = self.run_cmd(cmd).strip()
+            message = self.run_cmd(cmd, required_real_result=True).strip()
         except subprocess.CalledProcessError as err:
             click.echo(f"Error getting commit message for {commit_sha}")
             click.echo(err.output)
             raise CherryPickException(f"Error getting commit message for {commit_sha}")
         if self.config["fix_commit_msg"]:
-            return message.replace("#", "GH-")
+            # Only replace "#" with "GH-" with the following conditions:
+            # * "#" is separated from the previous word
+            # * "#" is followed by at least 5-digit number that
+            #   does not start with 0
+            # * the number is separated from the following word
+            return re.sub(r"\B#(?=[1-9][0-9]{4,}\b)", "GH-", message)
         else:
             return message
 
@@ -326,12 +334,11 @@ To abort the cherry-pick and cleanup:
         """
         # Get the original commit message and prefix it with the branch name
         # if that's enabled.
-        commit_prefix = ""
+        updated_commit_message = self.get_commit_message(self.commit_sha1)
         if self.prefix_commit:
-            commit_prefix = (
-                f"[{get_base_branch(cherry_pick_branch, config=self.config)}] "
-            )
-        updated_commit_message = f"{commit_prefix}{self.get_commit_message(self.commit_sha1)}"
+            updated_commit_message = remove_commit_prefix(updated_commit_message)
+            base_branch = get_base_branch(cherry_pick_branch, config=self.config)
+            updated_commit_message = f"[{base_branch}] {updated_commit_message}"
 
         # Add '(cherry picked from commit ...)' to the message
         # and add new Co-authored-by trailer if necessary.
@@ -357,7 +364,9 @@ To abort the cherry-pick and cleanup:
         #
         # This needs to be done because `git interpret-trailers` required us to add `:`
         # to `cherry_pick_information` when we don't actually want it.
-        before, after = output.strip().decode().rsplit(f"\n{cherry_pick_information}", 1)
+        before, after = (
+            output.strip().decode().rsplit(f"\n{cherry_pick_information}", 1)
+        )
         if not before.endswith("\n"):
             # ensure that we still have a newline between cherry pick information
             # and commit headline
@@ -367,7 +376,7 @@ To abort the cherry-pick and cleanup:
         return updated_commit_message
 
     def amend_commit_message(self, cherry_pick_branch):
-        """ prefix the commit message with (X.Y) """
+        """Prefix the commit message with (X.Y)"""
 
         updated_commit_message = self.get_updated_commit_message(cherry_pick_branch)
         if self.dry_run:
@@ -437,6 +446,7 @@ $ cherry_picker --abort
         request_headers = sansio.create_headers(self.username, oauth_token=gh_auth)
         title, body = normalize_commit_message(commit_message)
         if not self.prefix_commit:
+            title = remove_commit_prefix(title)
             title = f"[{base_branch}] {title}"
         data = {
             "title": title,
@@ -446,11 +456,11 @@ $ cherry_picker --abort
             "maintainer_can_modify": True,
         }
         url = CREATE_PR_URL_TEMPLATE.format(config=self.config)
-        response = requests.post(url, headers=request_headers, json=data)
+        response = requests.post(url, headers=request_headers, json=data, timeout=10)
         if response.status_code == requests.codes.created:
             response_data = response.json()
             click.echo(f"Backport PR created at {response_data['html_url']}")
-            self.pr_number = response_data['number']
+            self.pr_number = response_data["number"]
         else:
             click.echo(response.status_code)
             click.echo(response.text)
@@ -490,6 +500,13 @@ $ cherry_picker --abort
         else:
             click.echo(f"branch {branch} has been deleted.")
             set_state(WORKFLOW_STATES.REMOVED_BACKPORT_BRANCH)
+
+    def unset_upstream(self, branch):
+        cmd = ["git", "branch", "--unset-upstream", branch]
+        try:
+            return self.run_cmd(cmd)
+        except subprocess.CalledProcessError as cpe:
+            click.echo(cpe.output)
 
     def backport(self):
         if not self.branches:
@@ -540,8 +557,13 @@ $ cherry_picker --abort
         """
         run `git cherry-pick --abort` and then clean up the branch
         """
-        if self.initial_state != WORKFLOW_STATES.BACKPORT_PAUSED:
-            raise ValueError("One can only abort a paused process.")
+        state = self.get_state_and_verify()
+        if state != WORKFLOW_STATES.BACKPORT_PAUSED:
+            raise ValueError(
+                f"One can only abort a paused process. "
+                f"Current state: {state}. "
+                f"Expected state: {WORKFLOW_STATES.BACKPORT_PAUSED}"
+            )
 
         try:
             validate_sha("CHERRY_PICK_HEAD")
@@ -570,8 +592,13 @@ $ cherry_picker --abort
         open the PR
         clean up branch
         """
-        if self.initial_state != WORKFLOW_STATES.BACKPORT_PAUSED:
-            raise ValueError("One can only continue a paused process.")
+        state = self.get_state_and_verify()
+        if state != WORKFLOW_STATES.BACKPORT_PAUSED:
+            raise ValueError(
+                "One can only continue a paused process. "
+                f"Current state: {state}. "
+                f"Expected state: {WORKFLOW_STATES.BACKPORT_PAUSED}"
+            )
 
         cherry_pick_branch = get_current_branch()
         if cherry_pick_branch.startswith("backport-"):
@@ -618,7 +645,8 @@ $ cherry_picker --abort
 
         else:
             click.echo(
-                f"Current branch ({cherry_pick_branch}) is not a backport branch.  Will not continue. \U0001F61B"
+                f"Current branch ({cherry_pick_branch}) is not a backport branch. "
+                "Will not continue. \U0001F61B"
             )
             set_state(WORKFLOW_STATES.CONTINUATION_FAILED)
 
@@ -630,13 +658,14 @@ $ cherry_picker --abort
         """
         Check that the repository is for the project we're configured to operate on.
 
-        This function performs the check by making sure that the sha specified in the config
-        is present in the repository that we're operating on.
+        This function performs the check by making sure that the sha specified in the
+        config is present in the repository that we're operating on.
         """
         try:
             validate_sha(self.config["check_sha"])
-        except ValueError:
-            raise InvalidRepoException()
+            self.get_state_and_verify()
+        except ValueError as ve:
+            raise InvalidRepoException(ve.args[0])
 
     def get_state_and_verify(self):
         """Return the run progress state stored in the Git config.
@@ -671,13 +700,13 @@ $ cherry_picker --abort
 
         cmd = ["git", "config", "--local", "--get", "remote.origin.mirror"]
         try:
-            out = self.run_cmd(cmd)
+            out = self.run_cmd(cmd, required_real_result=True)
         except subprocess.CalledProcessError:
             return False
         return out.startswith("true")
 
 
-CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
+CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 
 
 @click.command(context_settings=CONTEXT_SETTINGS)
@@ -817,7 +846,8 @@ def get_base_branch(cherry_pick_branch, *, config):
 
     if prefix != "backport":
         raise ValueError(
-            'branch name is not prefixed with "backport-".  Is this a cherry_picker branch?'
+            'branch name is not prefixed with "backport-". '
+            "Is this a cherry_picker branch?"
         )
 
     if not re.match("[0-9a-f]{7,40}", sha):
@@ -840,12 +870,13 @@ def validate_sha(sha):
 
     raises ValueError if the sha does not reference a commit within the repo
     """
-    cmd = ["git", "log", "-r", sha]
+    cmd = ["git", "log", "--max-count=1", "-r", sha]
     try:
         subprocess.check_output(cmd, stderr=subprocess.STDOUT)
     except subprocess.SubprocessError:
         raise ValueError(
-            f"The sha listed in the branch name, {sha}, is not present in the repository"
+            f"The sha listed in the branch name, {sha}, "
+            "is not present in the repository"
         )
 
 
@@ -861,21 +892,19 @@ def compute_version_sort_key(config, branch):
     to oldest version.
     Branches without version information come second and are sorted alphabetically.
     """
-    match = re.match(r"^.*(?P<version>\d+(\.\d+)+).*$", branch)
-    try:
-        raw_version = match.groupdict()["version"].split(".")
-    except AttributeError as attr_err:
-        if not branch:
-            raise ValueError("Branch name is an empty string.") from attr_err
-        if config["require_version_in_branch_name"]:
-            raise ValueError(
-                f"Branch {branch} seems to not have a version in its name."
-            ) from attr_err
-        # Use 1 to sort regular branch names *after* version numbers
-        return (1, branch)
-    else:
+    m = re.search(r"\d+(?:\.\d+)+", branch)
+    if m:
+        raw_version = m[0].split(".")
         # Use 0 to sort version numbers *before* regular branch names
         return (0, *(-int(x) for x in raw_version))
+
+    if not branch:
+        raise ValueError("Branch name is an empty string.")
+    if config["require_version_in_branch_name"]:
+        raise ValueError(f"Branch {branch} seems to not have a version in its name.")
+
+    # Use 1 to sort regular branch names *after* version numbers
+    return (1, branch)
 
 
 def get_current_branch():
@@ -912,10 +941,19 @@ def normalize_commit_message(commit_message):
     """
     Return a tuple of title and body from the commit message
     """
-    split_commit_message = commit_message.split("\n")
-    title = split_commit_message[0]
-    body = "\n".join(split_commit_message[1:])
+    title, _, body = commit_message.partition("\n")
     return title, body.lstrip("\n")
+
+
+def remove_commit_prefix(commit_message):
+    """
+    Remove prefix "[X.Y] " from the commit message
+    """
+    while True:
+        m = re.match(r"\[\d+(?:\.\d+)+\] *", commit_message)
+        if not m:
+            return commit_message
+        commit_message = commit_message[m.end() :]
 
 
 def is_git_repo():
