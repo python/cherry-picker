@@ -194,7 +194,7 @@ class CherryPicker:
     def sorted_branches(self):
         """Return the branches to cherry-pick to, sorted by version."""
         return sorted(
-            self.branches, key=functools.partial(version_sort_key, self.config)
+            self.branches, key=functools.partial(compute_version_sort_key, self.config)
         )
 
     @property
@@ -829,7 +829,7 @@ def get_base_branch(cherry_pick_branch, *, config):
 
     # Subject the parsed base_branch to the same tests as when we generated it
     # This throws a ValueError if the base_branch doesn't meet our requirements
-    version_sort_key(config, base_branch)
+    compute_version_sort_key(config, base_branch)
 
     return base_branch
 
@@ -849,7 +849,7 @@ def validate_sha(sha):
         )
 
 
-def version_sort_key(config, branch):
+def compute_version_sort_key(config, branch):
     """
     Get sort key based on version information from the given git branch name.
 
