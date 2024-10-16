@@ -147,7 +147,6 @@ class UserPreferences:
         with open(preferences_path, "rb") as fp:
             data = tomllib.load(fp)
         applicable_preferences = []
-        continue_mode = ctx.params["abort"] is False
 
         if "global" in data:
             global_preferences = data["global"]
