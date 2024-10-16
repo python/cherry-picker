@@ -861,8 +861,8 @@ def version_sort_key(config, branch):
     to oldest version.
     Branches without version information come second and are sorted alphabetically.
     """
+    match = re.match(r"^.*(?P<version>\d+(\.\d+)+).*$", branch)
     try:
-        match = re.match(r"^.*(?P<version>\d+(\.\d+)+).*$", branch)
         raw_version = match.groupdict()["version"].split(".")
     except AttributeError as attr_err:
         if not branch:
