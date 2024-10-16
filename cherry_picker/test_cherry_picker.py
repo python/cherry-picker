@@ -246,7 +246,7 @@ def test_invalid_branch_empty_string(os_path_exists, config):
         ["3.1", "2.7", "3.10", "3.6", ""],
         config=config,
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"^Branch name is an empty string\.$"):
         cp.sorted_branches
 
 
