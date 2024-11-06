@@ -50,15 +50,13 @@ Write tests using [pytest](https://docs.pytest.org/).
 
 ## Setup info
 
-Requires Python 3.8+.
-
 ```console
 $ python3 -m venv venv
 $ source venv/bin/activate
 (venv) $ python -m pip install cherry_picker
 ```
 
-The cherry picking script assumes that if an `upstream` remote is defined, then
+The cherry-picking script assumes that if an `upstream` remote is defined, then
 it should be used as the source of upstream changes and as the base for
 cherry-pick branches. Otherwise, `origin` is used for that purpose.
 You can override this behavior with the `--upstream-remote` option
