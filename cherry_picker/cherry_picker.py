@@ -11,6 +11,7 @@ import sys
 import webbrowser
 
 import click
+from click.termui import _ansi_colors as color_names
 import requests
 from gidgethub import sansio
 
@@ -31,6 +32,8 @@ DEFAULT_CONFIG = collections.ChainMap(
         "check_sha": "7f777ed95a19224294949e1b4ce56bbffcb1fe9f",
         "fix_commit_msg": True,
         "default_branch": "main",
+        "bright": "red",
+        "dim": "0x808080",
     }
 )
 
@@ -77,7 +80,6 @@ WORKFLOW_STATES = enum.Enum(
     """,
 )
 
-
 class BranchCheckoutException(Exception):
     def __init__(self, branch_name):
         self.branch_name = branch_name
@@ -109,6 +111,7 @@ class CherryPicker:
         config=DEFAULT_CONFIG,
         chosen_config_path=None,
         auto_pr=True,
+        use_color=True,
     ):
         self.chosen_config_path = chosen_config_path
         """The config reference used in the current runtime.
@@ -137,6 +140,14 @@ class CherryPicker:
         self.push = push
         self.auto_pr = auto_pr
         self.prefix_commit = prefix_commit
+        self.dim = config["dim"]
+        self.bright = config["bright"]
+
+        if not use_color or os.environ.get("NO_COLOR") is not None:
+            self.dim = self.bright = None
+
+        self.dim = normalize_color(self.dim)
+        self.bright = normalize_color(self.bright)
 
         # the cached calculated value of self.upstream property
         self._upstream = None
@@ -306,7 +317,7 @@ class CherryPicker:
             click.echo(self.run_cmd(cmd))
         except subprocess.CalledProcessError as err:
             click.echo(f"Error cherry-pick {self.commit_sha1}.")
-            click.echo(err.output)
+            click.secho(err.output, fg=self.dim)
             raise CherryPickException(f"Error cherry-pick {self.commit_sha1}.")
 
     def get_exit_message(self, branch):
@@ -387,7 +398,7 @@ To abort the cherry-pick and cleanup:
         return updated_commit_message
 
     def pause_after_committing(self, cherry_pick_branch):
-        click.echo(
+        click.secho(
             f"""
 Finished cherry-pick {self.commit_sha1} into {cherry_pick_branch} \U0001F600
 --no-push option used.
@@ -397,7 +408,8 @@ $ cherry_picker --continue
 
 To abort the cherry-pick and cleanup:
 $ cherry_picker --abort
-"""
+""",
+            fg=self.bright,
         )
         self.set_paused_state()
 
@@ -468,8 +480,8 @@ $ cherry_picker --abort
         if self.dry_run:
             click.echo(f"  dry-run: Create new PR: {url}")
         else:
-            click.echo("Backport PR URL:")
-            click.echo(url)
+            click.secho("Backport PR URL:", fg=self.bright)
+            click.secho(url, fg=self.bright)
             webbrowser.open_new_tab(url)
 
     def delete_branch(self, branch):
@@ -530,9 +542,9 @@ $ cherry_picker --abort
                 commit_message = self.amend_commit_message(cherry_pick_branch)
             except subprocess.CalledProcessError as cpe:
                 click.echo(cpe.output)
-                click.echo(self.get_exit_message(maint_branch))
+                click.secho(self.get_exit_message(maint_branch), fg=self.bright)
             except CherryPickException:
-                click.echo(self.get_exit_message(maint_branch))
+                click.secho(self.get_exit_message(maint_branch), fg=self.bright)
                 self.set_paused_state()
                 raise
             else:
@@ -776,6 +788,19 @@ CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 )
 @click.argument("commit_sha1", nargs=1, default="")
 @click.argument("branches", nargs=-1)
+@click.option(
+    "--color/--no-color",
+    "color",
+    is_flag=True,
+    default=True,
+    help=(
+        "If color display is enabled (the default), cherry-picker will use color to"
+        " distinguish its output from that of 'git cherry-pick'. Color display can"
+        " also be suppressed by setting NO_COLOR environment variable to non-empty value."
+    ),
+)
+@click.argument("bright", nargs=1)
+@click.argument("dim", nargs=1)
 @click.pass_context
 def cherry_pick_cli(
     ctx,
@@ -789,6 +814,9 @@ def cherry_pick_cli(
     config_path,
     commit_sha1,
     branches,
+    color,
+    bright,
+    dim,
 ):
     """cherry-pick COMMIT_SHA1 into target BRANCHES."""
 
@@ -807,6 +835,7 @@ def cherry_pick_cli(
             auto_pr=auto_pr,
             config=config,
             chosen_config_path=chosen_config_path,
+            use_color=color,
         )
     except InvalidRepoException:
         click.echo(f"You're not inside a {config['repo']} repo right now! \U0001F645")
@@ -1069,6 +1098,59 @@ def from_git_rev_read(path):
 
 def get_state_from_string(state_str):
     return WORKFLOW_STATES.__members__[state_str]
+
+
+def normalize_color(color):
+    """Produce colors in Click's format from strings.
+
+    Supported formats are:
+
+    * color names understood by Click. See:
+        https://click.palletsprojects.com/en/8.1.x/api/#click.style
+    * RGB values of the form 0xRRGGBB or 0xRGB.
+    * Tuple of ints (base 10), must have leading and trailing parens,
+      and values separated by commas, e.g., "( 44, 88, 255)".
+
+    """
+
+    if color is None:
+        return color
+
+    color = color.strip().lower()
+
+    if color.lower().startswith("0x"):
+        # Assume it's a hex string and convert it to Click's tuple of ints
+        # form.  It's kind of surprising Click doesn't support hex strings
+        # directly.
+        if len(color) == 8:
+            # assume six-digit hex, 0xRRGGBB
+            return (
+                int(color[2:4], 16),
+                int(color[4:6], 16),
+                int(color[6:8], 16),
+                )
+        elif len(color) == 5:
+            # assume three-digit hex, 0xRGB
+            return (
+                int(color[2], 16) * 16,
+                int(color[3], 16) * 16,
+                int(color[4], 16) * 16,
+                )
+        else:
+            raise ValueError(f"unrecognized hex string: {color!r}")
+
+    if color[0] == "(" and color[-1] == ")":
+        # let's hope it's a tuple of ints...
+        try:
+            red, green, blue = [int(x.strip()) for x in color[1:-1].split(",")]
+        except ValueError as exc:
+            raise ValueError(f"unrecognized tuple of ints string: {color!r}") from exc
+        return (red, green, blue)
+
+    # fallback is to assume it's a color name supported by click.
+    if color in color_names:
+        return color
+    raise ValueError(f"unrecognized color: '{color!r}'")
 
 
 if __name__ == "__main__":
