@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.4.0
+
+- Add support for Python 3.14 ([PR 145](https://github.com/python/cherry-picker/pull/145)
+- Allow passing a base branch that doesn't have version info
+  ([PR 70](https://github.com/python/cherry-picker/pull/70)
+  - This makes cherry-picker useful for projects other than CPython that don't
+    have versioned branch names.
+
 ## 2.3.0
 
 - Add support for Python 3.13
