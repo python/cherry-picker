@@ -23,6 +23,7 @@ jobs:
           # fetch all branches and tags
           # ref actions/checkout#448
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
