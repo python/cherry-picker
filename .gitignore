@@ -402,3 +402,6 @@ $RECYCLE.BIN/
 
 # hatch-vcs
 cherry_picker/_version.py
+
+# Ignore uv.lock
+uv.lock
