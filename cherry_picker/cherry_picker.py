@@ -812,7 +812,14 @@ def cherry_pick_cli(
             config=config,
             chosen_config_path=chosen_config_path,
         )
-    except InvalidRepoException:
+    except InvalidRepoException as e:
+        if "--remove-section cherry-picker" in str(e):
+            click.echo(
+                "The cherry-picker state in the Git config is invalid. "
+                "You might need to run `git config --local "
+                "--remove-section cherry-picker`,"
+            )
+            sys.exit(-1)
         click.echo(f"You're not inside a {config['repo']} repo right now! \U0001F645")
         sys.exit(-1)
     except ValueError as exc:
