@@ -445,7 +445,11 @@ Date:   Thu Aug 9 14:25:15 1990 +0000
 
 def test_is_not_cpython_repo():
     # use default CPython sha to fail on this repo
-    with pytest.raises(InvalidRepoException):
+    with pytest.raises(
+        InvalidRepoException,
+        match=r"The sha listed in the branch name, "
+        r"\w+, is not present in the repository",
+    ):
         CherryPicker("origin", "22a594a0047d7706537ff2ac676cdc0f1dcb329c", ["3.6"])
 
 
