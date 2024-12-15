@@ -138,6 +138,7 @@ check_sha = "f382b5ffc445e45a110734f5396728da7914aeb6"
 fix_commit_msg = false
 default_branch = "devel"
 require_version_in_branch_name = false
+draft_pr = false
 ```
 
 Available config options:
@@ -169,6 +170,9 @@ default_branch                  Project's default branch name,
 require_version_in_branch_name  Allow backporting to branches whose names don't contain
                                 something that resembles a version number
                                 (i.e. at least two dot-separated numbers).
+
+draft_pr                        Create PR as draft
+                                (false by default)
 ```
 
 To customize the tool for used by other project:
