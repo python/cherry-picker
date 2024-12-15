@@ -33,6 +33,7 @@ DEFAULT_CONFIG = collections.ChainMap(
         "fix_commit_msg": True,
         "default_branch": "main",
         "require_version_in_branch_name": True,
+        "draft_pr": False,
     }
 )
 
@@ -454,6 +455,7 @@ $ cherry_picker --abort
             "head": f"{self.username}:{head_branch}",
             "base": base_branch,
             "maintainer_can_modify": True,
+            "draft": self.config["draft_pr"],
         }
         url = CREATE_PR_URL_TEMPLATE.format(config=self.config)
         response = requests.post(url, headers=request_headers, json=data, timeout=10)
