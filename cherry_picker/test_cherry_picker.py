@@ -7,6 +7,7 @@ import subprocess
 import warnings
 from collections import ChainMap
 from unittest import mock
+from unittest.mock import MagicMock
 
 import click
 import pytest
@@ -495,6 +496,7 @@ def test_load_full_config(tmp_git_repo_dir, git_add, git_commit):
             "fix_commit_msg": True,
             "default_branch": "devel",
             "require_version_in_branch_name": True,
+            "draft_pr": False,
         },
     )
 
@@ -519,6 +521,7 @@ def test_load_partial_config(tmp_git_repo_dir, git_add, git_commit):
             "fix_commit_msg": True,
             "default_branch": "main",
             "require_version_in_branch_name": True,
+            "draft_pr": False,
         },
     )
 
@@ -548,6 +551,7 @@ def test_load_config_no_head_sha(tmp_git_repo_dir, git_add, git_commit):
             "fix_commit_msg": True,
             "default_branch": "devel",
             "require_version_in_branch_name": True,
+            "draft_pr": False,
         },
     )
 
@@ -1336,3 +1340,51 @@ def test_abort_cherry_pick_success(
 
 def test_cli_invoked():
     subprocess.check_call("cherry_picker --help".split())
+
+
+@pytest.mark.parametrize("draft_pr", (True, False))
+@mock.patch("requests.post")
+@mock.patch("gidgethub.sansio.create_headers")
+@mock.patch.object(CherryPicker, "username", new_callable=mock.PropertyMock)
+def test_create_gh_pr_draft_states(
+    mock_username, mock_create_headers, mock_post, monkeypatch, draft_pr, config
+):
+    config["draft_pr"] = draft_pr
+    mock_username.return_value = "username"
+    monkeypatch.setenv("GH_AUTH", "True")
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker(
+            "origin", "xxx", [], prefix_commit=True, config=config
+        )
+    mock_create_headers.return_value = {"Authorization": "token gh-token"}
+
+    mock_response = MagicMock()
+    mock_response.status_code = 201
+    mock_response.json.return_value = {
+        "html_url": "https://github.com/octocat/Hello-World/pull/1347",
+        "number": 1347,
+    }
+    mock_post.return_value = mock_response
+
+    base_branch = "main"
+    head_branch = "feature-branch"
+    commit_message = "Commit message"
+    gh_auth = "gh_auth"
+
+    cherry_picker.create_gh_pr(
+        base_branch, head_branch, commit_message=commit_message, gh_auth=gh_auth
+    )
+
+    mock_post.assert_called_once_with(
+        "https://api.github.com/repos/python/cpython/pulls",
+        headers={"Authorization": "token gh-token"},
+        json={
+            "title": "Commit message",
+            "body": "",
+            "head": "username:feature-branch",
+            "base": "main",
+            "maintainer_can_modify": True,
+            "draft": draft_pr,
+        },
+        timeout=10,
+    )
