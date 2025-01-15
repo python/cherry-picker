@@ -568,7 +568,7 @@ $ cherry_picker --abort
                         )
                     except GitHubException:
                         click.echo(self.get_exit_message(maint_branch))
-                        self.set_paused_state()                        
+                        self.set_paused_state()
                         raise
                     if not self.is_mirror():
                         self.cleanup_branch(cherry_pick_branch)
