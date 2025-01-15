@@ -798,8 +798,12 @@ def cherry_pick_cli(
 
     click.echo("\U0001F40D \U0001F352 \u26CF")
 
-    chosen_config_path, config = load_config(config_path)
-
+    try:
+        chosen_config_path, config = load_config(config_path)
+    except ValueError as exc:
+        click.echo("You're not inside a Git tree right now! \U0001F645", err=True)
+        click.echo(exc, err=True)
+        sys.exit(-1)
     try:
         cherry_picker = CherryPicker(
             pr_remote,
@@ -813,7 +817,7 @@ def cherry_pick_cli(
             chosen_config_path=chosen_config_path,
         )
     except InvalidRepoException as ire:
-        click.echo(ire.args[0])
+        click.echo(ire.args[0], err=True)
         sys.exit(-1)
     except ValueError as exc:
         ctx.fail(exc)
@@ -1015,7 +1019,12 @@ def load_config(path=None):
 def get_sha1_from(commitish):
     """Turn 'commitish' into its sha1 hash."""
     cmd = ["git", "rev-parse", commitish]
-    return subprocess.check_output(cmd).strip().decode("utf-8")
+    try:
+        return (
+            subprocess.check_output(cmd, stderr=subprocess.PIPE).strip().decode("utf-8")
+        )
+    except subprocess.CalledProcessError as exc:
+        raise ValueError(exc.stderr.strip().decode("utf-8"))
 
 
 def reset_stored_config_ref():
