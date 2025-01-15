@@ -28,6 +28,7 @@ dependencies = [
   "click>=6",
   "gidgethub",
   "requests",
+  "stamina",
   "tomli>=1.1; python_version<'3.11'",
 ]
 optional-dependencies.dev = [

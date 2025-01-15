@@ -13,6 +13,7 @@ import webbrowser
 
 import click
 import requests
+import stamina
 from gidgethub import sansio
 
 from . import __version__
@@ -55,6 +56,7 @@ WORKFLOW_STATES = enum.Enum(
     PUSHING_TO_REMOTE_FAILED
 
     PR_CREATING
+    PR_CREATING_FAILED
     PR_OPENING
 
     REMOVING_BACKPORT_BRANCH
@@ -92,6 +94,10 @@ class CherryPickException(Exception):
 
 
 class InvalidRepoException(Exception):
+    pass
+
+
+class GitHubException(Exception):
     pass
 
 
@@ -430,16 +436,21 @@ $ cherry_picker --abort
             gh_auth = os.getenv("GH_AUTH")
             if gh_auth:
                 set_state(WORKFLOW_STATES.PR_CREATING)
-                self.create_gh_pr(
-                    base_branch,
-                    head_branch,
-                    commit_message=commit_message,
-                    gh_auth=gh_auth,
-                )
+                try:
+                    self.create_gh_pr(
+                        base_branch,
+                        head_branch,
+                        commit_message=commit_message,
+                        gh_auth=gh_auth,
+                    )
+                except GitHubException:
+                    set_state(WORKFLOW_STATES.PR_CREATING_FAILED)
+                    raise
             else:
                 set_state(WORKFLOW_STATES.PR_OPENING)
                 self.open_pr(self.get_pr_url(base_branch, head_branch))
 
+    @stamina.retry(on=GitHubException, timeout=120)
     def create_gh_pr(self, base_branch, head_branch, *, commit_message, gh_auth):
         """
         Create PR in GitHub
@@ -458,14 +469,22 @@ $ cherry_picker --abort
             "draft": self.config["draft_pr"],
         }
         url = CREATE_PR_URL_TEMPLATE.format(config=self.config)
-        response = requests.post(url, headers=request_headers, json=data, timeout=10)
-        if response.status_code == requests.codes.created:
-            response_data = response.json()
-            click.echo(f"Backport PR created at {response_data['html_url']}")
-            self.pr_number = response_data["number"]
+        try:
+            response = requests.post(
+                url, headers=request_headers, json=data, timeout=30
+            )
+        except requests.exceptions.RequestException as req_exc:
+            raise GitHubException(f"Creating PR on GitHub failed: {req_exc}")
         else:
-            click.echo(response.status_code)
-            click.echo(response.text)
+            sc = response.status_code
+            txt = response.text
+            if sc != requests.codes.created:
+                raise GitHubException(
+                    f"Unexpected response ({sc}) when creating PR on GitHub: {txt}"
+                )
+        response_data = response.json()
+        click.echo(f"Backport PR created at {response_data['html_url']}")
+        self.pr_number = response_data["number"]
 
     def open_pr(self, url):
         """
@@ -543,9 +562,14 @@ $ cherry_picker --abort
                 raise
             else:
                 if self.push:
-                    self.push_to_remote(
-                        maint_branch, cherry_pick_branch, commit_message
-                    )
+                    try:
+                        self.push_to_remote(
+                            maint_branch, cherry_pick_branch, commit_message
+                        )
+                    except GitHubException:
+                        click.echo(self.get_exit_message(maint_branch))
+                        self.set_paused_state()                        
+                        raise
                     if not self.is_mirror():
                         self.cleanup_branch(cherry_pick_branch)
                 else:
