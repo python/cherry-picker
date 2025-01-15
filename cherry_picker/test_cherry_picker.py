@@ -7,6 +7,7 @@ import subprocess
 import warnings
 from collections import ChainMap
 from unittest import mock
+from unittest.mock import MagicMock
 
 import click
 import pytest
@@ -149,20 +150,20 @@ def tmp_git_repo_dir(tmpdir, cd, git_init, git_commit, git_config):
 
 
 @mock.patch("subprocess.check_output")
-def test_get_base_branch(subprocess_check_output):
+def test_get_base_branch(subprocess_check_output, config):
     # The format of cherry-pick branches we create are::
     #     backport-{SHA}-{base_branch}
     subprocess_check_output.return_value = b"22a594a0047d7706537ff2ac676cdc0f1dcb329c"
     cherry_pick_branch = "backport-22a594a-2.7"
-    result = get_base_branch(cherry_pick_branch)
+    result = get_base_branch(cherry_pick_branch, config=config)
     assert result == "2.7"
 
 
 @mock.patch("subprocess.check_output")
-def test_get_base_branch_which_has_dashes(subprocess_check_output):
+def test_get_base_branch_which_has_dashes(subprocess_check_output, config):
     subprocess_check_output.return_value = b"22a594a0047d7706537ff2ac676cdc0f1dcb329c"
     cherry_pick_branch = "backport-22a594a-baseprefix-2.7-basesuffix"
-    result = get_base_branch(cherry_pick_branch)
+    result = get_base_branch(cherry_pick_branch, config=config)
     assert result == "baseprefix-2.7-basesuffix"
 
 
@@ -171,14 +172,14 @@ def test_get_base_branch_which_has_dashes(subprocess_check_output):
     [
         "backport-22a594a",  # Not enough fields
         "prefix-22a594a-2.7",  # Not the prefix we were expecting
-        "backport-22a594a-base",  # No version info in the base branch
+        "backport-22a594a-",  # No base branch
     ],
 )
 @mock.patch("subprocess.check_output")
-def test_get_base_branch_invalid(subprocess_check_output, cherry_pick_branch):
+def test_get_base_branch_invalid(subprocess_check_output, cherry_pick_branch, config):
     subprocess_check_output.return_value = b"22a594a0047d7706537ff2ac676cdc0f1dcb329c"
     with pytest.raises(ValueError):
-        get_base_branch(cherry_pick_branch)
+        get_base_branch(cherry_pick_branch, config=config)
 
 
 @mock.patch("subprocess.check_output")
@@ -206,18 +207,33 @@ def test_get_author_info_from_short_sha(subprocess_check_output):
 
 
 @pytest.mark.parametrize(
-    "input_branches,sorted_branches",
+    "input_branches,sorted_branches,require_version",
     [
-        (["3.1", "2.7", "3.10", "3.6"], ["3.10", "3.6", "3.1", "2.7"]),
+        (["3.1", "2.7", "3.10", "3.6"], ["3.10", "3.6", "3.1", "2.7"], True),
         (
             ["stable-3.1", "lts-2.7", "3.10-other", "smth3.6else"],
             ["3.10-other", "smth3.6else", "stable-3.1", "lts-2.7"],
+            True,
+        ),
+        (["3.1", "2.7", "3.10", "3.6"], ["3.10", "3.6", "3.1", "2.7"], False),
+        (
+            ["stable-3.1", "lts-2.7", "3.10-other", "smth3.6else"],
+            ["3.10-other", "smth3.6else", "stable-3.1", "lts-2.7"],
+            False,
+        ),
+        (
+            ["3.7", "3.10", "2.7", "foo", "stable", "branch"],
+            ["3.10", "3.7", "2.7", "branch", "foo", "stable"],
+            False,
         ),
     ],
 )
 @mock.patch("os.path.exists")
-def test_sorted_branch(os_path_exists, config, input_branches, sorted_branches):
+def test_sorted_branch(
+    os_path_exists, config, input_branches, sorted_branches, require_version
+):
     os_path_exists.return_value = True
+    config["require_version_in_branch_name"] = require_version
     cp = CherryPicker(
         "origin",
         "22a594a0047d7706537ff2ac676cdc0f1dcb329c",
@@ -225,6 +241,21 @@ def test_sorted_branch(os_path_exists, config, input_branches, sorted_branches):
         config=config,
     )
     assert cp.sorted_branches == sorted_branches
+
+
+@mock.patch("os.path.exists")
+def test_invalid_branch_empty_string(os_path_exists, config):
+    os_path_exists.return_value = True
+    # already tested for require_version_in_branch_name=True below
+    config["require_version_in_branch_name"] = False
+    cp = CherryPicker(
+        "origin",
+        "22a594a0047d7706537ff2ac676cdc0f1dcb329c",
+        ["3.1", "2.7", "3.10", "3.6", ""],
+        config=config,
+    )
+    with pytest.raises(ValueError, match=r"^Branch name is an empty string\.$"):
+        cp.sorted_branches
 
 
 @pytest.mark.parametrize(
@@ -415,7 +446,11 @@ Date:   Thu Aug 9 14:25:15 1990 +0000
 
 def test_is_not_cpython_repo():
     # use default CPython sha to fail on this repo
-    with pytest.raises(InvalidRepoException):
+    with pytest.raises(
+        InvalidRepoException,
+        match=r"The sha listed in the branch name, "
+        r"\w+, is not present in the repository",
+    ):
         CherryPicker("origin", "22a594a0047d7706537ff2ac676cdc0f1dcb329c", ["3.6"])
 
 
@@ -460,6 +495,8 @@ def test_load_full_config(tmp_git_repo_dir, git_add, git_commit):
             "team": "python",
             "fix_commit_msg": True,
             "default_branch": "devel",
+            "require_version_in_branch_name": True,
+            "draft_pr": False,
         },
     )
 
@@ -483,6 +520,8 @@ def test_load_partial_config(tmp_git_repo_dir, git_add, git_commit):
             "team": "python",
             "fix_commit_msg": True,
             "default_branch": "main",
+            "require_version_in_branch_name": True,
+            "draft_pr": False,
         },
     )
 
@@ -511,6 +550,8 @@ def test_load_config_no_head_sha(tmp_git_repo_dir, git_add, git_commit):
             "team": "python",
             "fix_commit_msg": True,
             "default_branch": "devel",
+            "require_version_in_branch_name": True,
+            "draft_pr": False,
         },
     )
 
@@ -665,13 +706,15 @@ def test_get_updated_commit_message_with_trailers(
     with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
         cherry_picker = CherryPicker("origin", commit, [])
 
-    with mock.patch(
-        "cherry_picker.cherry_picker.validate_sha", return_value=True
-    ), mock.patch.object(
-        cherry_picker, "get_commit_message", return_value=commit_message
-    ), mock.patch(
-        "cherry_picker.cherry_picker.get_author_info_from_short_sha",
-        return_value="PR Author <author@name.email>",
+    with (
+        mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True),
+        mock.patch.object(
+            cherry_picker, "get_commit_message", return_value=commit_message
+        ),
+        mock.patch(
+            "cherry_picker.cherry_picker.get_author_info_from_short_sha",
+            return_value="PR Author <author@name.email>",
+        ),
     ):
         updated_commit_message = cherry_picker.get_updated_commit_message(
             cherry_pick_branch
@@ -914,9 +957,10 @@ def test_get_state_and_verify_fail(
         r"stored in Git config using the following command: "
         r"`git config --local --remove-section cherry-picker`"
     )
-    with mock.patch(
-        "cherry_picker.cherry_picker.validate_sha", return_value=True
-    ), pytest.raises(InvalidRepoException, match=expected_msg_regexp):
+    with (
+        mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True),
+        pytest.raises(InvalidRepoException, match=expected_msg_regexp),
+    ):
         CherryPicker("origin", "xxx", [])
 
 
@@ -932,9 +976,11 @@ def test_push_to_remote_interactive(tmp_git_repo_dir):
     with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
         cherry_picker = CherryPicker("origin", "xxx", [])
 
-    with mock.patch.object(cherry_picker, "run_cmd"), mock.patch.object(
-        cherry_picker, "open_pr"
-    ), mock.patch.object(cherry_picker, "get_pr_url", return_value="https://pr_url"):
+    with (
+        mock.patch.object(cherry_picker, "run_cmd"),
+        mock.patch.object(cherry_picker, "open_pr"),
+        mock.patch.object(cherry_picker, "get_pr_url", return_value="https://pr_url"),
+    ):
         cherry_picker.push_to_remote("main", "backport-branch-test")
     assert get_state() == WORKFLOW_STATES.PR_OPENING
 
@@ -944,8 +990,9 @@ def test_push_to_remote_botflow(tmp_git_repo_dir, monkeypatch):
     with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
         cherry_picker = CherryPicker("origin", "xxx", [])
 
-    with mock.patch.object(cherry_picker, "run_cmd"), mock.patch.object(
-        cherry_picker, "create_gh_pr"
+    with (
+        mock.patch.object(cherry_picker, "run_cmd"),
+        mock.patch.object(cherry_picker, "create_gh_pr"),
     ):
         cherry_picker.push_to_remote("main", "backport-branch-test")
     assert get_state() == WORKFLOW_STATES.PR_CREATING
@@ -956,8 +1003,9 @@ def test_push_to_remote_no_auto_pr(tmp_git_repo_dir, monkeypatch):
     with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
         cherry_picker = CherryPicker("origin", "xxx", [], auto_pr=False)
 
-    with mock.patch.object(cherry_picker, "run_cmd"), mock.patch.object(
-        cherry_picker, "create_gh_pr"
+    with (
+        mock.patch.object(cherry_picker, "run_cmd"),
+        mock.patch.object(cherry_picker, "create_gh_pr"),
     ):
         cherry_picker.push_to_remote("main", "backport-branch-test")
     assert get_state() == WORKFLOW_STATES.PUSHED_TO_REMOTE
@@ -995,10 +1043,13 @@ def test_backport_cherry_pick_fail(
             pr_remote, scm_revision, cherry_pick_target_branches
         )
 
-    with pytest.raises(CherryPickException), mock.patch.object(
-        cherry_picker, "checkout_branch"
-    ), mock.patch.object(cherry_picker, "fetch_upstream"), mock.patch.object(
-        cherry_picker, "cherry_pick", side_effect=CherryPickException
+    with (
+        pytest.raises(CherryPickException),
+        mock.patch.object(cherry_picker, "checkout_branch"),
+        mock.patch.object(cherry_picker, "fetch_upstream"),
+        mock.patch.object(
+            cherry_picker, "cherry_pick", side_effect=CherryPickException
+        ),
     ):
         cherry_picker.backport()
 
@@ -1027,13 +1078,16 @@ def test_backport_cherry_pick_crash_ignored(
             pr_remote, scm_revision, cherry_pick_target_branches
         )
 
-    with mock.patch.object(cherry_picker, "checkout_branch"), mock.patch.object(
-        cherry_picker, "fetch_upstream"
-    ), mock.patch.object(cherry_picker, "cherry_pick"), mock.patch.object(
-        cherry_picker,
-        "amend_commit_message",
-        side_effect=subprocess.CalledProcessError(
-            1, ("git", "commit", "-am", "new commit message")
+    with (
+        mock.patch.object(cherry_picker, "checkout_branch"),
+        mock.patch.object(cherry_picker, "fetch_upstream"),
+        mock.patch.object(cherry_picker, "cherry_pick"),
+        mock.patch.object(
+            cherry_picker,
+            "amend_commit_message",
+            side_effect=subprocess.CalledProcessError(
+                1, ("git", "commit", "-am", "new commit message")
+            ),
         ),
     ):
         cherry_picker.backport()
@@ -1067,9 +1121,10 @@ def test_backport_cherry_pick_branch_already_exists(
     )
     git_branch(backport_branch_name)
 
-    with mock.patch.object(cherry_picker, "fetch_upstream"), pytest.raises(
-        BranchCheckoutException
-    ) as exc_info:
+    with (
+        mock.patch.object(cherry_picker, "fetch_upstream"),
+        pytest.raises(BranchCheckoutException) as exc_info,
+    ):
         cherry_picker.backport()
 
     assert exc_info.value.branch_name == backport_branch_name
@@ -1098,10 +1153,12 @@ def test_backport_success(
             pr_remote, scm_revision, cherry_pick_target_branches
         )
 
-    with mock.patch.object(cherry_picker, "checkout_branch"), mock.patch.object(
-        cherry_picker, "fetch_upstream"
-    ), mock.patch.object(
-        cherry_picker, "amend_commit_message", return_value="commit message"
+    with (
+        mock.patch.object(cherry_picker, "checkout_branch"),
+        mock.patch.object(cherry_picker, "fetch_upstream"),
+        mock.patch.object(
+            cherry_picker, "amend_commit_message", return_value="commit message"
+        ),
     ):
         cherry_picker.backport()
 
@@ -1141,8 +1198,11 @@ def test_backport_pause_and_continue(
             pr_remote, scm_revision, cherry_pick_target_branches, push=False
         )
 
-    with mock.patch.object(cherry_picker, "fetch_upstream"), mock.patch.object(
-        cherry_picker, "amend_commit_message", return_value="commit message"
+    with (
+        mock.patch.object(cherry_picker, "fetch_upstream"),
+        mock.patch.object(
+            cherry_picker, "amend_commit_message", return_value="commit message"
+        ),
     ):
         cherry_picker.backport()
 
@@ -1164,26 +1224,26 @@ def test_backport_pause_and_continue(
 
 Co-authored-by: Author Name <author@name.email>"""
 
-    with mock.patch(
-        "cherry_picker.cherry_picker.wipe_cfg_vals_from_git_cfg"
-    ), mock.patch(
-        "cherry_picker.cherry_picker.get_full_sha_from_short",
-        return_value="xxxxxxyyyyyy",
-    ), mock.patch(
-        "cherry_picker.cherry_picker.get_base_branch", return_value="3.8"
-    ), mock.patch(
-        "cherry_picker.cherry_picker.get_current_branch",
-        return_value="backport-xxx-3.8",
-    ), mock.patch.object(
-        cherry_picker, "amend_commit_message", return_value=commit_message
-    ) as amend_commit_message, mock.patch.object(
-        cherry_picker, "get_updated_commit_message", return_value=commit_message
-    ) as get_updated_commit_message, mock.patch.object(
-        cherry_picker, "checkout_branch"
-    ), mock.patch.object(
-        cherry_picker, "fetch_upstream"
-    ), mock.patch.object(
-        cherry_picker, "cleanup_branch"
+    with (
+        mock.patch("cherry_picker.cherry_picker.wipe_cfg_vals_from_git_cfg"),
+        mock.patch(
+            "cherry_picker.cherry_picker.get_full_sha_from_short",
+            return_value="xxxxxxyyyyyy",
+        ),
+        mock.patch("cherry_picker.cherry_picker.get_base_branch", return_value="3.8"),
+        mock.patch(
+            "cherry_picker.cherry_picker.get_current_branch",
+            return_value="backport-xxx-3.8",
+        ),
+        mock.patch.object(
+            cherry_picker, "amend_commit_message", return_value=commit_message
+        ) as amend_commit_message,
+        mock.patch.object(
+            cherry_picker, "get_updated_commit_message", return_value=commit_message
+        ) as get_updated_commit_message,
+        mock.patch.object(cherry_picker, "checkout_branch"),
+        mock.patch.object(cherry_picker, "fetch_upstream"),
+        mock.patch.object(cherry_picker, "cleanup_branch"),
     ):
         cherry_picker.continue_cherry_pick()
 
@@ -1280,3 +1340,51 @@ def test_abort_cherry_pick_success(
 
 def test_cli_invoked():
     subprocess.check_call("cherry_picker --help".split())
+
+
+@pytest.mark.parametrize("draft_pr", (True, False))
+@mock.patch("requests.post")
+@mock.patch("gidgethub.sansio.create_headers")
+@mock.patch.object(CherryPicker, "username", new_callable=mock.PropertyMock)
+def test_create_gh_pr_draft_states(
+    mock_username, mock_create_headers, mock_post, monkeypatch, draft_pr, config
+):
+    config["draft_pr"] = draft_pr
+    mock_username.return_value = "username"
+    monkeypatch.setenv("GH_AUTH", "True")
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker(
+            "origin", "xxx", [], prefix_commit=True, config=config
+        )
+    mock_create_headers.return_value = {"Authorization": "token gh-token"}
+
+    mock_response = MagicMock()
+    mock_response.status_code = 201
+    mock_response.json.return_value = {
+        "html_url": "https://github.com/octocat/Hello-World/pull/1347",
+        "number": 1347,
+    }
+    mock_post.return_value = mock_response
+
+    base_branch = "main"
+    head_branch = "feature-branch"
+    commit_message = "Commit message"
+    gh_auth = "gh_auth"
+
+    cherry_picker.create_gh_pr(
+        base_branch, head_branch, commit_message=commit_message, gh_auth=gh_auth
+    )
+
+    mock_post.assert_called_once_with(
+        "https://api.github.com/repos/python/cpython/pulls",
+        headers={"Authorization": "token gh-token"},
+        json={
+            "title": "Commit message",
+            "body": "",
+            "head": "username:feature-branch",
+            "base": "main",
+            "maintainer_can_modify": True,
+            "draft": draft_pr,
+        },
+        timeout=10,
+    )

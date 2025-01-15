@@ -2,6 +2,6 @@
 
 from __future__ import annotations
 
-import importlib.metadata
+from ._version import __version__
 
-__version__ = importlib.metadata.version(__name__)
+__all__ = ["__version__"]
