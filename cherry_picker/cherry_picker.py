@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import collections
 import enum
+import functools
 import os
 import re
 import subprocess
@@ -31,12 +32,13 @@ DEFAULT_CONFIG = collections.ChainMap(
         "check_sha": "7f777ed95a19224294949e1b4ce56bbffcb1fe9f",
         "fix_commit_msg": True,
         "default_branch": "main",
+        "require_version_in_branch_name": True,
     }
 )
 
 
 WORKFLOW_STATES = enum.Enum(
-    "Workflow states",
+    "WORKFLOW_STATES",
     """
     FETCHING_UPSTREAM
     FETCHED_UPSTREAM
@@ -191,12 +193,14 @@ class CherryPicker:
     @property
     def sorted_branches(self):
         """Return the branches to cherry-pick to, sorted by version."""
-        return sorted(self.branches, reverse=True, key=version_from_branch)
+        return sorted(
+            self.branches, key=functools.partial(compute_version_sort_key, self.config)
+        )
 
     @property
     def username(self):
         cmd = ["git", "config", "--get", f"remote.{self.pr_remote}.url"]
-        result = self.run_cmd(cmd, required_real_result=True)
+        result = self.run_cmd(cmd, required_real_result=True).strip()
         # implicit ssh URIs use : to separate host from user, others just use /
         username = result.replace(":", "/").rstrip("/").split("/")[-2]
         return username
@@ -330,12 +334,11 @@ To abort the cherry-pick and cleanup:
         """
         # Get the original commit message and prefix it with the branch name
         # if that's enabled.
-        commit_prefix = ""
+        updated_commit_message = self.get_commit_message(self.commit_sha1)
         if self.prefix_commit:
-            commit_prefix = f"[{get_base_branch(cherry_pick_branch)}] "
-        updated_commit_message = (
-            f"{commit_prefix}{self.get_commit_message(self.commit_sha1)}"
-        )
+            updated_commit_message = remove_commit_prefix(updated_commit_message)
+            base_branch = get_base_branch(cherry_pick_branch, config=self.config)
+            updated_commit_message = f"[{base_branch}] {updated_commit_message}"
 
         # Add '(cherry picked from commit ...)' to the message
         # and add new Co-authored-by trailer if necessary.
@@ -443,6 +446,7 @@ $ cherry_picker --abort
         request_headers = sansio.create_headers(self.username, oauth_token=gh_auth)
         title, body = normalize_commit_message(commit_message)
         if not self.prefix_commit:
+            title = remove_commit_prefix(title)
             title = f"[{base_branch}] {title}"
         data = {
             "title": title,
@@ -600,7 +604,7 @@ $ cherry_picker --abort
         if cherry_pick_branch.startswith("backport-"):
             set_state(WORKFLOW_STATES.CONTINUATION_STARTED)
             # amend the commit message, prefix with [X.Y]
-            base = get_base_branch(cherry_pick_branch)
+            base = get_base_branch(cherry_pick_branch, config=self.config)
             short_sha = cherry_pick_branch[
                 cherry_pick_branch.index("-") + 1 : cherry_pick_branch.index(base) - 1
             ]
@@ -702,7 +706,7 @@ $ cherry_picker --abort
         return out.startswith("true")
 
 
-CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
+CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 
 
 @click.command(context_settings=CONTEXT_SETTINGS)
@@ -812,11 +816,8 @@ def cherry_pick_cli(
             config=config,
             chosen_config_path=chosen_config_path,
         )
-    except InvalidRepoException as exc:
-        click.echo(
-            f"You're not inside a {config['repo']} repo right now! \U0001F645", err=True
-        )
-        click.echo(exc, err=True)
+    except InvalidRepoException as ire:
+        click.echo(ire.args[0], err=True)
         sys.exit(-1)
     except ValueError as exc:
         ctx.fail(exc)
@@ -838,7 +839,7 @@ def cherry_pick_cli(
             sys.exit(-1)
 
 
-def get_base_branch(cherry_pick_branch):
+def get_base_branch(cherry_pick_branch, *, config):
     """
     return '2.7' from 'backport-sha-2.7'
 
@@ -862,7 +863,7 @@ def get_base_branch(cherry_pick_branch):
 
     # Subject the parsed base_branch to the same tests as when we generated it
     # This throws a ValueError if the base_branch doesn't meet our requirements
-    version_from_branch(base_branch)
+    compute_version_sort_key(config, base_branch)
 
     return base_branch
 
@@ -883,23 +884,31 @@ def validate_sha(sha):
         )
 
 
-def version_from_branch(branch):
+def compute_version_sort_key(config, branch):
     """
-    return version information from a git branch name
+    Get sort key based on version information from the given git branch name.
+
+    This function can be used as a sort key in list.sort()/sorted() provided that
+    you additionally pass config as a first argument by e.g. wrapping it with
+    functools.partial().
+
+    Branches with version information come first and are sorted from latest
+    to oldest version.
+    Branches without version information come second and are sorted alphabetically.
     """
-    try:
-        return tuple(
-            map(
-                int,
-                re.match(r"^.*(?P<version>\d+(\.\d+)+).*$", branch)
-                .groupdict()["version"]
-                .split("."),
-            )
-        )
-    except AttributeError as attr_err:
-        raise ValueError(
-            f"Branch {branch} seems to not have a version in its name."
-        ) from attr_err
+    m = re.search(r"\d+(?:\.\d+)+", branch)
+    if m:
+        raw_version = m[0].split(".")
+        # Use 0 to sort version numbers *before* regular branch names
+        return (0, *(-int(x) for x in raw_version))
+
+    if not branch:
+        raise ValueError("Branch name is an empty string.")
+    if config["require_version_in_branch_name"]:
+        raise ValueError(f"Branch {branch} seems to not have a version in its name.")
+
+    # Use 1 to sort regular branch names *after* version numbers
+    return (1, branch)
 
 
 def get_current_branch():
@@ -936,10 +945,19 @@ def normalize_commit_message(commit_message):
     """
     Return a tuple of title and body from the commit message
     """
-    split_commit_message = commit_message.split("\n")
-    title = split_commit_message[0]
-    body = "\n".join(split_commit_message[1:])
+    title, _, body = commit_message.partition("\n")
     return title, body.lstrip("\n")
+
+
+def remove_commit_prefix(commit_message):
+    """
+    Remove prefix "[X.Y] " from the commit message
+    """
+    while True:
+        m = re.match(r"\[\d+(?:\.\d+)+\] *", commit_message)
+        if not m:
+            return commit_message
+        commit_message = commit_message[m.end() :]
 
 
 def is_git_repo():

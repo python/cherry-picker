@@ -399,3 +399,9 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.gitignore.io/api/git,linux,pydev,python,windows,pycharm+all,jupyternotebook,vim,webstorm,emacs
+
+# hatch-vcs
+cherry_picker/_version.py
+
+# Ignore uv.lock
+uv.lock

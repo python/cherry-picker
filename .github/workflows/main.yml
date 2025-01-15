@@ -2,6 +2,9 @@ name: tests
 
 on: [push, pull_request, workflow_dispatch]
 
+permissions:
+  contents: read
+
 env:
   FORCE_COLOR: 1
 
@@ -11,28 +14,32 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
         os: [windows-latest, macos-latest, ubuntu-latest]
+
     steps:
       - uses: actions/checkout@v4
         with:
           # fetch all branches and tags
           # ref actions/checkout#448
           fetch-depth: 0
+          persist-credentials: false
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
-          cache: pip
-          cache-dependency-path: pyproject.toml
-      - name: Install tox
-        run: |
-          python -m pip install tox
+
+      - name: Install uv
+        uses: hynek/setup-cached-uv@v2
+
       - name: Run tests
-        run: tox -e py
+        run: uvx --with tox-uv tox -e py
+
       - name: Upload coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           flags: ${{ matrix.os }}
           name: ${{ matrix.os }} Python ${{ matrix.python-version }}
+          token: ${{ secrets.CODECOV_ORG_TOKEN }}
