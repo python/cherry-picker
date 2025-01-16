@@ -1386,5 +1386,5 @@ def test_create_gh_pr_draft_states(
             "maintainer_can_modify": True,
             "draft": draft_pr,
         },
-        timeout=10,
+        timeout=30,
     )
