@@ -1,10 +1,20 @@
 # Changelog
 
+## 2.5.0
+
+* Add draft config option to Create Pull Request by @gopidesupavan in https://github.com/python/cherry-picker/pull/151
+* Better error message when cherry_picker is called in wrong state by @serhiy-storchaka in https://github.com/python/cherry-picker/pull/119
+* Bubble up error message by @dpr-0 in https://github.com/python/cherry-picker/pull/112
+* Acknowledge network issues on GitHub by @ambv in https://github.com/python/cherry-picker/pull/153
+* Ignore uv.lock file by @potiuk in https://github.com/python/cherry-picker/pull/149
+* Fix mypy pre-commit settings by @potiuk in https://github.com/python/cherry-picker/pull/148
+* Update CI config by @hugovk in https://github.com/python/cherry-picker/pull/144
+
 ## 2.4.0
 
-- Add support for Python 3.14 ([PR 145](https://github.com/python/cherry-picker/pull/145)
+- Add support for Python 3.14 ([PR 145](https://github.com/python/cherry-picker/pull/145))
 - Allow passing a base branch that doesn't have version info
-  ([PR 70](https://github.com/python/cherry-picker/pull/70)
+  ([PR 70](https://github.com/python/cherry-picker/pull/70))
   - This makes cherry-picker useful for projects other than CPython that don't
     have versioned branch names.
 
