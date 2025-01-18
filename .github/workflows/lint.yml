@@ -20,5 +20,4 @@ jobs:
         with:
           python-version: "3.x"
       - uses: tox-dev/action-pre-commit-uv@v1
-      # Ignore 70612 / CVE-2019-8341, Jinja2 is a safety dep, not ours
-      - run: uvx safety check --ignore 70612
+      - run: uvx safety check
