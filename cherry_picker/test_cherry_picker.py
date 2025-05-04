@@ -1165,6 +1165,58 @@ def test_backport_success(
     assert get_state() == WORKFLOW_STATES.UNSET
 
 
+def test_backport_pause_aud_continue_multiple(
+    tmp_git_repo_dir, git_branch, git_add, git_commit, git_checkout
+):
+    cherry_pick_target_branches = ("3.8", "3.7", "3.6")
+    pr_remote = "origin"
+    upstream_remote = "upstream"
+    test_file = "some.file"
+    tmp_git_repo_dir.join(test_file).write("some contents")
+    for branch in cherry_pick_target_branches:
+        git_branch(branch)
+        git_branch(f"{upstream_remote}/{branch}", branch)
+    git_add(test_file)
+    git_commit("Add a test file")
+    scm_revision = get_sha1_from("HEAD")
+
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker(
+            pr_remote, scm_revision, cherry_pick_target_branches, push=False
+        )
+
+    cherry_picker._upstream = upstream_remote
+    with (
+        mock.patch.object(cherry_picker, "push_to_remote"),
+        mock.patch.object(cherry_picker, "fetch_upstream"),
+        mock.patch.object(
+            cherry_picker, "amend_commit_message", return_value="commit message"
+        ),
+    ):
+        cherry_picker.backport()
+
+    assert get_state() == WORKFLOW_STATES.BACKPORT_PAUSED
+    assert cherry_picker.get_remaining_backports() == ["3.7", "3.6"]
+
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker(
+            pr_remote, scm_revision, cherry_pick_target_branches
+        )
+
+    cherry_picker._upstream = upstream_remote
+    with (
+        mock.patch("cherry_picker.cherry_picker.wipe_cfg_vals_from_git_cfg"),
+        mock.patch.object(cherry_picker, "push_to_remote"),
+        mock.patch.object(cherry_picker, "fetch_upstream"),
+        mock.patch.object(
+            cherry_picker, "amend_commit_message", return_value="commit message"
+        ),
+    ):
+        cherry_picker.continue_cherry_pick()
+    assert get_state() == WORKFLOW_STATES.BACKPORT_LOOP_END
+    assert cherry_picker.get_remaining_backports() == []
+
+
 @pytest.mark.parametrize("already_committed", (True, False))
 @pytest.mark.parametrize("push", (True, False))
 def test_backport_pause_and_continue(
@@ -1255,7 +1307,7 @@ Co-authored-by: Author Name <author@name.email>"""
         amend_commit_message.assert_not_called()
 
     if push:
-        assert get_state() == WORKFLOW_STATES.BACKPORTING_CONTINUATION_SUCCEED
+        assert get_state() == WORKFLOW_STATES.BACKPORT_LOOPING
     else:
         assert get_state() == WORKFLOW_STATES.BACKPORT_PAUSED
 
