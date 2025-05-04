@@ -165,6 +165,24 @@ class CherryPicker:
         current_branch = get_current_branch()
         save_cfg_vals_to_git_cfg(previous_branch=current_branch)
 
+    def set_remaining_backports(self, branches):
+        """Save the remaining backport branches into Git config."""
+        save_cfg_vals_to_git_cfg(remaining_backport=" ".join(branches))
+
+    def get_remaining_backports(self):
+        """Get the remaining backport branches from Git config."""
+        branches = load_val_from_git_cfg("remaining_backport")
+        if branches is None:
+            return []
+        return branches.split()
+
+    def pop_remaining_backports(self):
+        """Get one of the remaining backport branch and remove it."""
+        branches = self.get_remaining_backports()
+        branch = branches.pop(0)
+        self.set_remaining_backports(branches)
+        return branch
+
     @property
     def upstream(self):
         """Get the remote name to use for upstream branches
@@ -535,9 +553,14 @@ $ cherry_picker --abort
         set_state(WORKFLOW_STATES.BACKPORT_STARTING)
         self.fetch_upstream()
         self.remember_previous_branch()
+        self.set_remaining_backports(self.sorted_branches)
+        self.process_remaining_backports()
 
+
+    def process_remaining_backports(self):
         set_state(WORKFLOW_STATES.BACKPORT_LOOPING)
-        for maint_branch in self.sorted_branches:
+        while self.get_remaining_backports():
+            maint_branch = self.pop_remaining_backports()
             set_state(WORKFLOW_STATES.BACKPORT_LOOP_START)
             click.echo(f"Now backporting '{self.commit_sha1}' into '{maint_branch}'")
 
@@ -577,6 +600,7 @@ $ cherry_picker --abort
                     return  # to preserve the correct state
             set_state(WORKFLOW_STATES.BACKPORT_LOOP_END)
         reset_stored_previous_branch()
+        reset_stored_config_ref()
         reset_state()
 
     def abort_cherry_pick(self):
@@ -669,6 +693,8 @@ $ cherry_picker --abort
                 self.pause_after_committing(cherry_pick_branch)
                 return  # to preserve the correct state
 
+            self.process_remaining_backports()
+
         else:
             click.echo(
                 f"Current branch ({cherry_pick_branch}) is not a backport branch. "
@@ -676,9 +702,6 @@ $ cherry_picker --abort
             )
             set_state(WORKFLOW_STATES.CONTINUATION_FAILED)
 
-        reset_stored_previous_branch()
-        reset_stored_config_ref()
-        reset_state()
 
     def check_repo(self):
         """
