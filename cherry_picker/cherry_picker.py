@@ -556,7 +556,6 @@ $ cherry_picker --abort
         self.set_remaining_backports(self.sorted_branches)
         self.process_remaining_backports()
 
-
     def process_remaining_backports(self):
         set_state(WORKFLOW_STATES.BACKPORT_LOOPING)
         while self.get_remaining_backports():
@@ -701,7 +700,6 @@ $ cherry_picker --abort
                 "Will not continue. \U0001F61B"
             )
             set_state(WORKFLOW_STATES.CONTINUATION_FAILED)
-
 
     def check_repo(self):
         """
