@@ -2,19 +2,20 @@
 build-backend = "hatchling.build"
 requires = [
   "hatch-vcs",
-  "hatchling",
+  "hatchling>=1.27",
 ]
 
 [project]
 name = "cherry-picker"
 description = "Backport CPython changes from main to maintenance branches"
 readme = "README.md"
+license = "Apache-2.0"
+license-files = [ "LICENSE" ]
 maintainers = [ { name = "Python Core Developers", email = "core-workflow@python.org" } ]
 authors = [ { name = "Mariatta Wijaya", email = "mariatta@python.org" } ]
 requires-python = ">=3.9"
 classifiers = [
   "Intended Audience :: Developers",
-  "License :: OSI Approved :: Apache Software License",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
