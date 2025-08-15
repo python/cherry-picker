@@ -418,7 +418,7 @@ To abort the cherry-pick and cleanup:
     def pause_after_committing(self, cherry_pick_branch):
         click.echo(
             f"""
-Finished cherry-pick {self.commit_sha1} into {cherry_pick_branch} \U0001F600
+Finished cherry-pick {self.commit_sha1} into {cherry_pick_branch} \U0001f600
 --no-push option used.
 ... Stopping here.
 To continue and push the changes:
@@ -659,7 +659,7 @@ $ cherry_picker --abort
             ]
             self.commit_sha1 = get_full_sha_from_short(short_sha)
 
-            commits = get_commits_from_backport_branch(base)
+            commits = get_commits_from_backport_branch(f"{self.upstream}/{base}")
             if len(commits) == 1:
                 commit_message = self.amend_commit_message(cherry_pick_branch)
             else:
@@ -697,7 +697,7 @@ $ cherry_picker --abort
         else:
             click.echo(
                 f"Current branch ({cherry_pick_branch}) is not a backport branch. "
-                "Will not continue. \U0001F61B"
+                "Will not continue. \U0001f61b"
             )
             set_state(WORKFLOW_STATES.CONTINUATION_FAILED)
 
@@ -843,12 +843,12 @@ def cherry_pick_cli(
 ):
     """cherry-pick COMMIT_SHA1 into target BRANCHES."""
 
-    click.echo("\U0001F40D \U0001F352 \u26CF")
+    click.echo("\U0001f40d \U0001f352 \u26cf")
 
     try:
         chosen_config_path, config = load_config(config_path)
     except ValueError as exc:
-        click.echo("You're not inside a Git tree right now! \U0001F645", err=True)
+        click.echo("You're not inside a Git tree right now! \U0001f645", err=True)
         click.echo(exc, err=True)
         sys.exit(-1)
     try:
