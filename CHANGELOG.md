@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.6.0
+
+* Check commit count against `upstream` by @webknjaz in https://github.com/python/cherry-picker/pull/156
+* Use PEP 639 licence expression and remove deprecated Trove classifier by @hugovk in https://github.com/python/cherry-picker/pull/160
+
 ## 2.5.0
 
 * Add draft config option to Create Pull Request by @gopidesupavan in https://github.com/python/cherry-picker/pull/151
