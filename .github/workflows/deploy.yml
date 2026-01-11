@@ -8,8 +8,7 @@ on:
       - published
   workflow_dispatch:
 
-permissions:
-  contents: read
+permissions: {}
 
 env:
   FORCE_COLOR: 1
@@ -32,7 +31,7 @@ jobs:
   release-test-pypi:
     name: Publish in-dev package to test.pypi.org
     if: |
-      github.repository_owner == 'python'
+      github.event.repository.fork == false
       && github.event_name == 'push'
       && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -58,7 +57,7 @@ jobs:
     name: Publish to PyPI
     # Only run for published releases.
     if: |
-      github.repository_owner == 'python'
+      github.event.repository.fork == false
       && github.event.action == 'published'
     runs-on: ubuntu-latest
     needs: build-package
