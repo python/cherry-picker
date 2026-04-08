@@ -478,7 +478,7 @@ def test_load_full_config(tmp_git_repo_dir, git_add, git_commit):
     relative_config_path = ".cherry_picker.toml"
     tmp_git_repo_dir.join(relative_config_path).write("""\
     team = "python"
-    repo = "core-workfolow"
+    repo = "core-workflow"
     check_sha = "5f007046b5d4766f971272a0cc99f8461215c1ec"
     default_branch = "devel"
     """)
@@ -490,7 +490,7 @@ def test_load_full_config(tmp_git_repo_dir, git_add, git_commit):
         scm_revision + ":" + relative_config_path,
         {
             "check_sha": "5f007046b5d4766f971272a0cc99f8461215c1ec",
-            "repo": "core-workfolow",
+            "repo": "core-workflow",
             "team": "python",
             "fix_commit_msg": True,
             "default_branch": "devel",
@@ -503,7 +503,7 @@ def test_load_full_config(tmp_git_repo_dir, git_add, git_commit):
 def test_load_partial_config(tmp_git_repo_dir, git_add, git_commit):
     relative_config_path = ".cherry_picker.toml"
     tmp_git_repo_dir.join(relative_config_path).write("""\
-    repo = "core-workfolow"
+    repo = "core-workflow"
     """)
     git_add(relative_config_path)
     git_commit("Add config")
@@ -513,7 +513,7 @@ def test_load_partial_config(tmp_git_repo_dir, git_add, git_commit):
         f"{scm_revision}:{relative_config_path}",
         {
             "check_sha": "7f777ed95a19224294949e1b4ce56bbffcb1fe9f",
-            "repo": "core-workfolow",
+            "repo": "core-workflow",
             "team": "python",
             "fix_commit_msg": True,
             "default_branch": "main",
@@ -527,7 +527,7 @@ def test_load_config_no_head_sha(tmp_git_repo_dir, git_add, git_commit):
     relative_config_path = ".cherry_picker.toml"
     tmp_git_repo_dir.join(relative_config_path).write("""\
     team = "python"
-    repo = "core-workfolow"
+    repo = "core-workflow"
     check_sha = "5f007046b5d4766f971272a0cc99f8461215c1ec"
     default_branch = "devel"
     """)
@@ -541,7 +541,7 @@ def test_load_config_no_head_sha(tmp_git_repo_dir, git_add, git_commit):
         ":" + relative_config_path,
         {
             "check_sha": "5f007046b5d4766f971272a0cc99f8461215c1ec",
-            "repo": "core-workfolow",
+            "repo": "core-workflow",
             "team": "python",
             "fix_commit_msg": True,
             "default_branch": "devel",
@@ -770,7 +770,7 @@ def test_paused_flow(tmp_git_repo_dir, git_add, git_commit):
     relative_file_path = "some.toml"
     tmp_git_repo_dir.join(relative_file_path).write(f"""\
     check_sha = "{initial_scm_revision}"
-    repo = "core-workfolow"
+    repo = "core-workflow"
     """)
     git_add(relative_file_path)
     git_commit("Add a config")
