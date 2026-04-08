@@ -398,8 +398,7 @@ To abort the cherry-pick and cleanup:
         return updated_commit_message
 
     def pause_after_committing(self, cherry_pick_branch):
-        click.echo(
-            f"""
+        click.echo(f"""
 Finished cherry-pick {self.commit_sha1} into {cherry_pick_branch} \U0001f600
 --no-push option used.
 ... Stopping here.
@@ -408,8 +407,7 @@ $ cherry_picker --continue
 
 To abort the cherry-pick and cleanup:
 $ cherry_picker --abort
-"""
-        )
+""")
         self.set_paused_state()
 
     def push_to_remote(self, base_branch, head_branch, commit_message=""):

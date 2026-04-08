@@ -133,7 +133,8 @@ def tmp_git_repo_dir(tmpdir, cd, git_init, git_commit, git_config):
     try:
         git_init()
     except subprocess.CalledProcessError:
-        version = subprocess.run(("git", "--version"), capture_output=True)
+        git_version_cmd = "git", "--version"
+        version = subprocess.run(git_version_cmd, capture_output=True)
         # the output looks like "git version 2.34.1"
         v = version.stdout.decode("utf-8").removeprefix("git version ").split(".")
         if (int(v[0]), int(v[1])) < (2, 28):
@@ -475,14 +476,12 @@ def test_find_config_not_git(tmpdir, cd):
 
 def test_load_full_config(tmp_git_repo_dir, git_add, git_commit):
     relative_config_path = ".cherry_picker.toml"
-    tmp_git_repo_dir.join(relative_config_path).write(
-        """\
+    tmp_git_repo_dir.join(relative_config_path).write("""\
     team = "python"
-    repo = "core-workfolow"
+    repo = "core-workflow"
     check_sha = "5f007046b5d4766f971272a0cc99f8461215c1ec"
     default_branch = "devel"
-    """
-    )
+    """)
     git_add(relative_config_path)
     git_commit("Add config")
     scm_revision = get_sha1_from("HEAD")
@@ -491,7 +490,7 @@ def test_load_full_config(tmp_git_repo_dir, git_add, git_commit):
         scm_revision + ":" + relative_config_path,
         {
             "check_sha": "5f007046b5d4766f971272a0cc99f8461215c1ec",
-            "repo": "core-workfolow",
+            "repo": "core-workflow",
             "team": "python",
             "fix_commit_msg": True,
             "default_branch": "devel",
@@ -503,11 +502,9 @@ def test_load_full_config(tmp_git_repo_dir, git_add, git_commit):
 
 def test_load_partial_config(tmp_git_repo_dir, git_add, git_commit):
     relative_config_path = ".cherry_picker.toml"
-    tmp_git_repo_dir.join(relative_config_path).write(
-        """\
-    repo = "core-workfolow"
-    """
-    )
+    tmp_git_repo_dir.join(relative_config_path).write("""\
+    repo = "core-workflow"
+    """)
     git_add(relative_config_path)
     git_commit("Add config")
     scm_revision = get_sha1_from("HEAD")
@@ -516,7 +513,7 @@ def test_load_partial_config(tmp_git_repo_dir, git_add, git_commit):
         f"{scm_revision}:{relative_config_path}",
         {
             "check_sha": "7f777ed95a19224294949e1b4ce56bbffcb1fe9f",
-            "repo": "core-workfolow",
+            "repo": "core-workflow",
             "team": "python",
             "fix_commit_msg": True,
             "default_branch": "main",
@@ -528,14 +525,12 @@ def test_load_partial_config(tmp_git_repo_dir, git_add, git_commit):
 
 def test_load_config_no_head_sha(tmp_git_repo_dir, git_add, git_commit):
     relative_config_path = ".cherry_picker.toml"
-    tmp_git_repo_dir.join(relative_config_path).write(
-        """\
+    tmp_git_repo_dir.join(relative_config_path).write("""\
     team = "python"
-    repo = "core-workfolow"
+    repo = "core-workflow"
     check_sha = "5f007046b5d4766f971272a0cc99f8461215c1ec"
     default_branch = "devel"
-    """
-    )
+    """)
     git_add(relative_config_path)
     git_commit(f"Add {relative_config_path}")
 
@@ -546,7 +541,7 @@ def test_load_config_no_head_sha(tmp_git_repo_dir, git_add, git_commit):
         ":" + relative_config_path,
         {
             "check_sha": "5f007046b5d4766f971272a0cc99f8461215c1ec",
-            "repo": "core-workfolow",
+            "repo": "core-workflow",
             "team": "python",
             "fix_commit_msg": True,
             "default_branch": "devel",
@@ -572,8 +567,7 @@ Co-authored-by: Elmar Ritsch <35851+elritsch@users.noreply.github.com>"""
         title == "[3.6] Fix broken `Show Source` links on documentation pages (GH-3113)"
     )
     assert (
-        body
-        == """The `Show Source` was broken because of a change made in sphinx 1.5.1
+        body == """The `Show Source` was broken because of a change made in sphinx 1.5.1
 In Sphinx 1.4.9, the sourcename was "index.txt".
 In Sphinx 1.5.1+, it is now "index.rst.txt".
 (cherry picked from commit b9ff498793611d1c6a9b99df464812931a1e2d69)
@@ -596,8 +590,7 @@ Co-authored-by: Elmar Ritsch <35851+elritsch@users.noreply.github.com>"""
         title == "[3.6] Fix broken `Show Source` links on documentation pages (GH-3113)"
     )
     assert (
-        body
-        == """(cherry picked from commit b9ff498793611d1c6a9b99df464812931a1e2d69)
+        body == """(cherry picked from commit b9ff498793611d1c6a9b99df464812931a1e2d69)
 
 
 Co-authored-by: Elmar Ritsch <35851+elritsch@users.noreply.github.com>"""
@@ -775,12 +768,10 @@ def test_paused_flow(tmp_git_repo_dir, git_add, git_commit):
     initial_scm_revision = get_sha1_from("HEAD")
 
     relative_file_path = "some.toml"
-    tmp_git_repo_dir.join(relative_file_path).write(
-        f"""\
+    tmp_git_repo_dir.join(relative_file_path).write(f"""\
     check_sha = "{initial_scm_revision}"
-    repo = "core-workfolow"
-    """
-    )
+    repo = "core-workflow"
+    """)
     git_add(relative_file_path)
     git_commit("Add a config")
     config_scm_revision = get_sha1_from("HEAD")

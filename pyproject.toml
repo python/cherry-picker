@@ -39,16 +39,12 @@ optional-dependencies.dev = [
 urls.Homepage = "https://github.com/python/cherry-picker"
 scripts.cherry_picker = "cherry_picker.cherry_picker:cherry_pick_cli"
 
-[tool.hatch.version]
-source = "vcs"
+[tool.hatch]
+build.hooks.vcs.version-file = "cherry_picker/_version.py"
+version.source = "vcs"
 # Change regex to match tags like "cherry-picker-v2.2.0".
-tag-pattern = '^cherry-picker-(?P<version>[vV]?\d+(?:\.\d+){0,2}[^\+]*)(?:\+.*)?$'
-
-[tool.hatch.build.hooks.vcs]
-version-file = "cherry_picker/_version.py"
-
-[tool.hatch.version.raw-options]
-local_scheme = "no-local-version"
+version.tag-pattern = "^cherry-picker-(?P<version>[vV]?\\d+(?:\\.\\d+){0,2}[^\\+]*)(?:\\+.*)?$"
+version.raw-options.local_scheme = "no-local-version"
 
 [tool.ruff]
 fix = true

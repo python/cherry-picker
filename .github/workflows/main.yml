@@ -41,4 +41,3 @@ jobs:
         with:
           flags: ${{ matrix.os }}
           name: ${{ matrix.os }} Python ${{ matrix.python-version }}
-          token: ${{ secrets.CODECOV_ORG_TOKEN }}
