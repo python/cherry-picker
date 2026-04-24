@@ -233,7 +233,11 @@ class CherryPicker:
         if not required_real_result and self.dry_run:
             click.echo(f"  dry-run: {' '.join(cmd)}")
             return
-        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        try:
+            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as exc:
+            click.echo(exc.output.decode("utf-8"))
+            raise
         return output.decode("utf-8")
 
     def checkout_branch(self, branch_name, *, create_branch=False):
