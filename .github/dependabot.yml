@@ -7,6 +7,10 @@ updates:
       interval: monthly
     assignees:
       - "ezio-melotti"
+    groups:
+      actions:
+        patterns:
+          - "*"
     open-pull-requests-limit: 10
     cooldown:
       # https://blog.yossarian.net/2025/11/21/We-should-all-be-using-dependency-cooldowns
@@ -21,6 +25,10 @@ updates:
       interval: monthly
     assignees:
       - "ezio-melotti"
+    groups:
+      pip:
+        patterns:
+          - "*"
     open-pull-requests-limit: 10
     cooldown:
       default-days: 14
