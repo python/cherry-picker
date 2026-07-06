@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import collections
 import enum
 import functools
@@ -11,7 +12,6 @@ import subprocess
 import sys
 import webbrowser
 
-import click
 import requests
 import stamina
 from gidgethub import sansio
@@ -101,6 +101,11 @@ class GitHubException(Exception):
     pass
 
 
+def _decode(output):
+    """Decode subprocess output bytes, tolerating None."""
+    return output.decode("utf-8") if output else ""
+
+
 class CherryPicker:
     ALLOWED_STATES = WORKFLOW_STATES.BACKPORT_PAUSED, WORKFLOW_STATES.UNSET
     """The list of states expected at the start of the app."""
@@ -136,7 +141,7 @@ class CherryPicker:
         """
 
         if dry_run:
-            click.echo("Dry run requested, listing expected command sequence")
+            print("Dry run requested, listing expected command sequence")
 
         self.pr_remote = pr_remote
         self.upstream_remote = upstream_remote
@@ -231,7 +236,7 @@ class CherryPicker:
     def run_cmd(self, cmd, required_real_result=False):
         assert not isinstance(cmd, str)
         if not required_real_result and self.dry_run:
-            click.echo(f"  dry-run: {' '.join(cmd)}")
+            print(f"  dry-run: {' '.join(cmd)}")
             return
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
         return output.decode("utf-8")
@@ -253,8 +258,8 @@ class CherryPicker:
         try:
             self.run_cmd(cmd)
         except subprocess.CalledProcessError as err:
-            click.echo(f"Error checking out the branch {checked_out_branch!r}.")
-            click.echo(err.output)
+            print(f"Error checking out the branch {checked_out_branch!r}.")
+            print(_decode(err.output))
             raise BranchCheckoutException(checked_out_branch)
         if create_branch:
             self.unset_upstream(checked_out_branch)
@@ -268,8 +273,8 @@ class CherryPicker:
         try:
             message = self.run_cmd(cmd, required_real_result=True).strip()
         except subprocess.CalledProcessError as err:
-            click.echo(f"Error getting commit message for {commit_sha}")
-            click.echo(err.output)
+            print(f"Error getting commit message for {commit_sha}")
+            print(_decode(err.output))
             raise CherryPickException(f"Error getting commit message for {commit_sha}")
         if self.config["fix_commit_msg"]:
             # Only replace "#" with "GH-" with the following conditions:
@@ -314,15 +319,15 @@ class CherryPicker:
         """git cherry-pick -x <commit_sha1>"""
         cmd = ["git", "cherry-pick", "-x", self.commit_sha1]
         try:
-            click.echo(self.run_cmd(cmd))
+            print(self.run_cmd(cmd))
         except subprocess.CalledProcessError as err:
-            click.echo(f"Error cherry-pick {self.commit_sha1}.")
-            click.echo(err.output)
+            print(f"Error cherry-pick {self.commit_sha1}.")
+            print(_decode(err.output))
             raise CherryPickException(f"Error cherry-pick {self.commit_sha1}.")
 
     def get_exit_message(self, branch):
         return f"""
-Failed to cherry-pick {self.commit_sha1} into {branch} \u2639
+Failed to cherry-pick {self.commit_sha1} into {branch} ☹
 ... Stopping here.
 
 To continue and resolve the conflict:
@@ -387,19 +392,19 @@ To abort the cherry-pick and cleanup:
 
         updated_commit_message = self.get_updated_commit_message(cherry_pick_branch)
         if self.dry_run:
-            click.echo(f"  dry-run: git commit --amend -m '{updated_commit_message}'")
+            print(f"  dry-run: git commit --amend -m '{updated_commit_message}'")
         else:
             cmd = ["git", "commit", "--amend", "-m", updated_commit_message]
             try:
                 self.run_cmd(cmd)
             except subprocess.CalledProcessError as cpe:
-                click.echo("Failed to amend the commit message \u2639")
-                click.echo(cpe.output)
+                print("Failed to amend the commit message ☹")
+                print(_decode(cpe.output))
         return updated_commit_message
 
     def pause_after_committing(self, cherry_pick_branch):
-        click.echo(f"""
-Finished cherry-pick {self.commit_sha1} into {cherry_pick_branch} \U0001f600
+        print(f"""
+Finished cherry-pick {self.commit_sha1} into {cherry_pick_branch} 😀
 --no-push option used.
 ... Stopping here.
 To continue and push the changes:
@@ -425,8 +430,8 @@ $ cherry_picker --abort
             self.run_cmd(cmd)
             set_state(WORKFLOW_STATES.PUSHED_TO_REMOTE)
         except subprocess.CalledProcessError as cpe:
-            click.echo(f"Failed to push to {self.pr_remote} \u2639")
-            click.echo(cpe.output)
+            print(f"Failed to push to {self.pr_remote} ☹")
+            print(_decode(cpe.output))
             set_state(WORKFLOW_STATES.PUSHING_TO_REMOTE_FAILED)
         else:
             if not self.auto_pr:
@@ -481,7 +486,7 @@ $ cherry_picker --abort
                     f"Unexpected response ({sc}) when creating PR on GitHub: {txt}"
                 )
         response_data = response.json()
-        click.echo(f"Backport PR created at {response_data['html_url']}")
+        print(f"Backport PR created at {response_data['html_url']}")
         self.pr_number = response_data["number"]
 
     def open_pr(self, url):
@@ -489,10 +494,10 @@ $ cherry_picker --abort
         open url in the web browser
         """
         if self.dry_run:
-            click.echo(f"  dry-run: Create new PR: {url}")
+            print(f"  dry-run: Create new PR: {url}")
         else:
-            click.echo("Backport PR URL:")
-            click.echo(url)
+            print("Backport PR URL:")
+            print(url)
             webbrowser.open_new_tab(url)
 
     def delete_branch(self, branch):
@@ -508,16 +513,16 @@ $ cherry_picker --abort
         try:
             self.checkout_previous_branch()
         except BranchCheckoutException:
-            click.echo(f"branch {branch} NOT deleted.")
+            print(f"branch {branch} NOT deleted.")
             set_state(WORKFLOW_STATES.REMOVING_BACKPORT_BRANCH_FAILED)
             return
         try:
             self.delete_branch(branch)
         except subprocess.CalledProcessError:
-            click.echo(f"branch {branch} NOT deleted.")
+            print(f"branch {branch} NOT deleted.")
             set_state(WORKFLOW_STATES.REMOVING_BACKPORT_BRANCH_FAILED)
         else:
-            click.echo(f"branch {branch} has been deleted.")
+            print(f"branch {branch} has been deleted.")
             set_state(WORKFLOW_STATES.REMOVED_BACKPORT_BRANCH)
 
     def unset_upstream(self, branch):
@@ -525,11 +530,11 @@ $ cherry_picker --abort
         try:
             return self.run_cmd(cmd)
         except subprocess.CalledProcessError as cpe:
-            click.echo(cpe.output)
+            print(_decode(cpe.output))
 
     def backport(self):
         if not self.branches:
-            raise click.UsageError("At least one branch must be specified.")
+            raise ValueError("At least one branch must be specified.")
         set_state(WORKFLOW_STATES.BACKPORT_STARTING)
         self.fetch_upstream()
         self.remember_previous_branch()
@@ -537,7 +542,7 @@ $ cherry_picker --abort
         set_state(WORKFLOW_STATES.BACKPORT_LOOPING)
         for maint_branch in self.sorted_branches:
             set_state(WORKFLOW_STATES.BACKPORT_LOOP_START)
-            click.echo(f"Now backporting '{self.commit_sha1}' into '{maint_branch}'")
+            print(f"Now backporting '{self.commit_sha1}' into '{maint_branch}'")
 
             cherry_pick_branch = self.get_cherry_pick_branch(maint_branch)
             try:
@@ -552,10 +557,10 @@ $ cherry_picker --abort
                 self.cherry_pick()
                 commit_message = self.amend_commit_message(cherry_pick_branch)
             except subprocess.CalledProcessError as cpe:
-                click.echo(cpe.output)
-                click.echo(self.get_exit_message(maint_branch))
+                print(_decode(cpe.output))
+                print(self.get_exit_message(maint_branch))
             except CherryPickException:
-                click.echo(self.get_exit_message(maint_branch))
+                print(self.get_exit_message(maint_branch))
                 self.set_paused_state()
                 raise
             else:
@@ -565,7 +570,7 @@ $ cherry_picker --abort
                             maint_branch, cherry_pick_branch, commit_message
                         )
                     except GitHubException:
-                        click.echo(self.get_exit_message(maint_branch))
+                        print(self.get_exit_message(maint_branch))
                         self.set_paused_state()
                         raise
                     if not self.is_mirror():
@@ -597,10 +602,10 @@ $ cherry_picker --abort
             cmd = ["git", "cherry-pick", "--abort"]
             try:
                 set_state(WORKFLOW_STATES.ABORTING)
-                click.echo(self.run_cmd(cmd))
+                print(self.run_cmd(cmd))
                 set_state(WORKFLOW_STATES.ABORTED)
             except subprocess.CalledProcessError as cpe:
-                click.echo(cpe.output)
+                print(_decode(cpe.output))
                 set_state(WORKFLOW_STATES.ABORTING_FAILED)
         # only delete backport branch created by cherry_picker.py
         if get_current_branch().startswith("backport-"):
@@ -640,7 +645,7 @@ $ cherry_picker --abort
             else:
                 commit_message = self.get_updated_commit_message(cherry_pick_branch)
                 if self.dry_run:
-                    click.echo(
+                    print(
                         f"  dry-run: git commit -a -m '{commit_message}' --allow-empty"
                     )
                 else:
@@ -660,17 +665,17 @@ $ cherry_picker --abort
                 if not self.is_mirror():
                     self.cleanup_branch(cherry_pick_branch)
 
-                click.echo("\nBackport PR:\n")
-                click.echo(commit_message)
+                print("\nBackport PR:\n")
+                print(commit_message)
                 set_state(WORKFLOW_STATES.BACKPORTING_CONTINUATION_SUCCEED)
             else:
                 self.pause_after_committing(cherry_pick_branch)
                 return  # to preserve the correct state
 
         else:
-            click.echo(
+            print(
                 f"Current branch ({cherry_pick_branch}) is not a backport branch. "
-                "Will not continue. \U0001f61b"
+                "Will not continue. 😛"
             )
             set_state(WORKFLOW_STATES.CONTINUATION_FAILED)
 
@@ -730,130 +735,122 @@ $ cherry_picker --abort
         return out.startswith("true")
 
 
-CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
+def get_parser():
+    parser = argparse.ArgumentParser(
+        prog="cherry_picker",
+        description="cherry-pick `commit_sha1` into target `branches`.",
+    )
+    parser.add_argument(
+        "-V", "--version", action="version", version=f"%(prog)s {__version__}"
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Prints out the commands, but not executed",
+    )
+    parser.add_argument(
+        "--pr-remote",
+        metavar="REMOTE",
+        default="origin",
+        help="Git remote to use for PR branches",
+    )
+    parser.add_argument(
+        "--upstream-remote",
+        metavar="REMOTE",
+        default=None,
+        help="Git remote to use for upstream branches",
+    )
+    abort_group = parser.add_mutually_exclusive_group()
+    abort_group.add_argument(
+        "--abort",
+        dest="abort",
+        action="store_const",
+        const=True,
+        default=None,
+        help="Abort current cherry-pick and clean up branch",
+    )
+    abort_group.add_argument(
+        "--continue",
+        dest="abort",
+        action="store_const",
+        const=False,
+        help="Continue cherry-pick, push, and clean up branch",
+    )
+    parser.add_argument(
+        "--status",
+        action="store_true",
+        help="Get the status of cherry-pick",
+    )
+    parser.add_argument(
+        "--push",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Changes won't be pushed to remote",
+    )
+    parser.add_argument(
+        "--auto-pr",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            "If auto PR is enabled, cherry-picker will automatically open a PR "
+            "through API if `GH_AUTH` env var is set, or automatically open the PR "
+            "creation page in the web browser otherwise."
+        ),
+    )
+    parser.add_argument(
+        "--config-path",
+        metavar="CONFIG-PATH",
+        default=None,
+        help=(
+            "Path to config file, `.cherry_picker.toml` "
+            "from project root by default. You can prepend "
+            "a colon-separated Git 'commitish' reference."
+        ),
+    )
+    parser.add_argument("commit_sha1", nargs="?", default="")
+    parser.add_argument("branches", nargs="*")
+    return parser
 
 
-@click.command(context_settings=CONTEXT_SETTINGS)
-@click.version_option(version=__version__)
-@click.option(
-    "--dry-run", is_flag=True, help="Prints out the commands, but not executed."
-)
-@click.option(
-    "--pr-remote",
-    "pr_remote",
-    metavar="REMOTE",
-    help="git remote to use for PR branches",
-    default="origin",
-)
-@click.option(
-    "--upstream-remote",
-    "upstream_remote",
-    metavar="REMOTE",
-    help="git remote to use for upstream branches",
-    default=None,
-)
-@click.option(
-    "--abort",
-    "abort",
-    flag_value=True,
-    default=None,
-    help="Abort current cherry-pick and clean up branch",
-)
-@click.option(
-    "--continue",
-    "abort",
-    flag_value=False,
-    default=None,
-    help="Continue cherry-pick, push, and clean up branch",
-)
-@click.option(
-    "--status",
-    "status",
-    flag_value=True,
-    default=None,
-    help="Get the status of cherry-pick",
-)
-@click.option(
-    "--push/--no-push",
-    "push",
-    is_flag=True,
-    default=True,
-    help="Changes won't be pushed to remote",
-)
-@click.option(
-    "--auto-pr/--no-auto-pr",
-    "auto_pr",
-    is_flag=True,
-    default=True,
-    help=(
-        "If auto PR is enabled, cherry-picker will automatically open a PR"
-        " through API if GH_AUTH env var is set, or automatically open the PR"
-        " creation page in the web browser otherwise."
-    ),
-)
-@click.option(
-    "--config-path",
-    "config_path",
-    metavar="CONFIG-PATH",
-    help=(
-        "Path to config file, .cherry_picker.toml "
-        "from project root by default. You can prepend "
-        "a colon-separated Git 'commitish' reference."
-    ),
-    default=None,
-)
-@click.argument("commit_sha1", nargs=1, default="")
-@click.argument("branches", nargs=-1)
-@click.pass_context
-def cherry_pick_cli(
-    ctx,
-    dry_run,
-    pr_remote,
-    upstream_remote,
-    abort,
-    status,
-    push,
-    auto_pr,
-    config_path,
-    commit_sha1,
-    branches,
-):
+def cherry_pick_cli(argv=None):
     """cherry-pick COMMIT_SHA1 into target BRANCHES."""
+    parser = get_parser()
+    args = parser.parse_args(argv)
 
-    click.echo("\U0001f40d \U0001f352 \u26cf")
+    print("🐍 🍒 ⛏")
 
     try:
-        chosen_config_path, config = load_config(config_path)
+        chosen_config_path, config = load_config(args.config_path)
     except ValueError as exc:
-        click.echo("You're not inside a Git tree right now! \U0001f645", err=True)
-        click.echo(exc, err=True)
+        print("You're not inside a Git tree right now! 🙅", file=sys.stderr)
+        print(exc, file=sys.stderr)
         sys.exit(-1)
     try:
         cherry_picker = CherryPicker(
-            pr_remote,
-            commit_sha1,
-            branches,
-            upstream_remote=upstream_remote,
-            dry_run=dry_run,
-            push=push,
-            auto_pr=auto_pr,
+            args.pr_remote,
+            args.commit_sha1,
+            args.branches,
+            upstream_remote=args.upstream_remote,
+            dry_run=args.dry_run,
+            push=args.push,
+            auto_pr=args.auto_pr,
             config=config,
             chosen_config_path=chosen_config_path,
         )
     except InvalidRepoException as ire:
-        click.echo(ire.args[0], err=True)
+        print(ire.args[0], file=sys.stderr)
         sys.exit(-1)
     except ValueError as exc:
-        ctx.fail(exc)
+        parser.error(str(exc))
 
-    if abort is not None:
-        if abort:
+    if args.abort is not None:
+        if args.abort:
             cherry_picker.abort_cherry_pick()
         else:
             cherry_picker.continue_cherry_pick()
 
-    elif status:
-        click.echo(cherry_picker.status())
+    elif args.status:
+        print(cherry_picker.status())
     else:
         try:
             cherry_picker.backport()

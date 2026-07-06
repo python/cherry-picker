@@ -9,7 +9,6 @@ from collections import ChainMap
 from unittest import mock
 from unittest.mock import MagicMock
 
-import click
 import pytest
 
 from .cherry_picker import (
@@ -1006,9 +1005,7 @@ def test_backport_no_branch(tmp_git_repo_dir, monkeypatch):
     with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
         cherry_picker = CherryPicker("origin", "xxx", [])
 
-    with pytest.raises(
-        click.UsageError, match="^At least one branch must be specified.$"
-    ):
+    with pytest.raises(ValueError, match="^At least one branch must be specified.$"):
         cherry_picker.backport()
 
 
