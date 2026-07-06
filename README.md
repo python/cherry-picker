@@ -7,27 +7,38 @@
 Usage (from a cloned CPython directory):
 
 ```
-Usage: cherry_picker [OPTIONS] [COMMIT_SHA1] [BRANCHES]...
+usage: cherry_picker [-h] [-V] [--dry-run] [--pr-remote REMOTE]
+                     [--upstream-remote REMOTE] [--abort | --continue]
+                     [--status] [--push | --no-push]
+                     [--auto-pr | --no-auto-pr] [--config-path CONFIG-PATH]
+                     [commit_sha1] [branches ...]
 
-  cherry-pick COMMIT_SHA1 into target BRANCHES.
+cherry-pick commit_sha1 into target branches.
 
-Options:
-  --version                  Show the version and exit.
-  --dry-run                  Prints out the commands, but not executed.
-  --pr-remote REMOTE         git remote to use for PR branches
-  --upstream-remote REMOTE   git remote to use for upstream branches
-  --abort                    Abort current cherry-pick and clean up branch
-  --continue                 Continue cherry-pick, push, and clean up branch
-  --status                   Get the status of cherry-pick
-  --push / --no-push         Changes won't be pushed to remote
-  --auto-pr / --no-auto-pr   If auto PR is enabled, cherry-picker will
-                             automatically open a PR through API if GH_AUTH
-                             env var is set, or automatically open the PR
-                             creation page in the web browser otherwise.
-  --config-path CONFIG-PATH  Path to config file, .cherry_picker.toml from
-                             project root by default. You can prepend a colon-
-                             separated Git 'commitish' reference.
-  -h, --help                 Show this message and exit.
+positional arguments:
+  commit_sha1
+  branches
+
+options:
+  -h, --help            show this help message and exit
+  -V, --version         show program's version number and exit
+  --dry-run             Prints out the commands, but not executed
+  --pr-remote REMOTE    Git remote to use for PR branches
+  --upstream-remote REMOTE
+                        Git remote to use for upstream branches
+  --abort               Abort current cherry-pick and clean up branch
+  --continue            Continue cherry-pick, push, and clean up branch
+  --status              Get the status of cherry-pick
+  --push, --no-push     Changes won't be pushed to remote
+  --auto-pr, --no-auto-pr
+                        If auto PR is enabled, cherry-picker will
+                        automatically open a PR through API if
+                        GH_AUTH env var is set, or automatically open
+                        the PR creation page in the web browser otherwise.
+  --config-path CONFIG-PATH
+                        Path to config file, .cherry_picker.toml from
+                        project root by default. You can prepend a colon-
+                        separated Git 'commitish' reference.
 ```
 
 ## About

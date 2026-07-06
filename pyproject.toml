@@ -26,7 +26,6 @@ classifiers = [
 ]
 dynamic = [ "version" ]
 dependencies = [
-  "click>=6",
   "gidgethub",
   "requests",
   "stamina",
