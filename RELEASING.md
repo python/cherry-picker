@@ -9,9 +9,9 @@
 
   - [ ] Click "Draft a new release"
 
-  - [ ] Click "Choose a tag"
+  - [ ] Click "Select tag"
 
-  - [ ] Type the next `cherry-picker-vX.Y.Z` version and select "**Create new tag: cherry-picker-vX.Y.Z** on publish"
+  - [ ] Type the next `cherry-picker-vX.Y.Z` version, click "Create new tag" then "Create"
 
   - [ ] Leave the "Release title" blank (it will be autofilled)
 
