@@ -241,7 +241,7 @@ class CherryPicker:
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as exc:
-            click.echo(exc.output.decode("utf-8"))
+            print(exc.output.decode("utf-8"))
             raise
         return output.decode("utf-8")
 
