@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.7.0
+
+* Improve error output when a command fails by @hugovk in https://github.com/python/cherry-picker/pull/176
+* Replace Click dependency with argparse by @hugovk in https://github.com/python/cherry-picker/pull/186
+* Add support for Python 3.15 by @hugovk in https://github.com/python/cherry-picker/pull/171
+* Drop support for Python 3.9 by @hugovk in https://github.com/python/cherry-picker/pull/164
+
 ## 2.6.0
 
 * Check commit count against `upstream` by @webknjaz in https://github.com/python/cherry-picker/pull/156
