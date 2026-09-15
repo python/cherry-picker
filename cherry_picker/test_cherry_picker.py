@@ -1331,11 +1331,10 @@ def test_cli_invoked():
 
 
 @pytest.mark.parametrize("draft_pr", (True, False))
-@mock.patch("requests.post")
-@mock.patch("gidgethub.sansio.create_headers")
+@mock.patch("urllib3.request")
 @mock.patch.object(CherryPicker, "username", new_callable=mock.PropertyMock)
 def test_create_gh_pr_draft_states(
-    mock_username, mock_create_headers, mock_post, monkeypatch, draft_pr, config
+    mock_username, mock_request, monkeypatch, draft_pr, config
 ):
     config["draft_pr"] = draft_pr
     mock_username.return_value = "username"
@@ -1344,15 +1343,13 @@ def test_create_gh_pr_draft_states(
         cherry_picker = CherryPicker(
             "origin", "xxx", [], prefix_commit=True, config=config
         )
-    mock_create_headers.return_value = {"Authorization": "token gh-token"}
-
     mock_response = MagicMock()
-    mock_response.status_code = 201
+    mock_response.status = 201
     mock_response.json.return_value = {
         "html_url": "https://github.com/octocat/Hello-World/pull/1347",
         "number": 1347,
     }
-    mock_post.return_value = mock_response
+    mock_request.return_value = mock_response
 
     base_branch = "main"
     head_branch = "feature-branch"
@@ -1363,9 +1360,15 @@ def test_create_gh_pr_draft_states(
         base_branch, head_branch, commit_message=commit_message, gh_auth=gh_auth
     )
 
-    mock_post.assert_called_once_with(
+    mock_request.assert_called_once_with(
+        "POST",
         "https://api.github.com/repos/python/cpython/pulls",
-        headers={"Authorization": "token gh-token"},
+        headers={
+            "User-Agent": "username",
+            "Accept": "application/vnd.github+json",
+            "Authorization": "token gh_auth",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
         json={
             "title": "Commit message",
             "body": "",

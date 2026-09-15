@@ -12,9 +12,8 @@ import subprocess
 import sys
 import webbrowser
 
-import requests
 import stamina
-from gidgethub import sansio
+import urllib3
 
 from . import __version__
 
@@ -462,7 +461,12 @@ $ cherry_picker --abort
         """
         Create PR in GitHub
         """
-        request_headers = sansio.create_headers(self.username, oauth_token=gh_auth)
+        request_headers = {
+            "User-Agent": self.username,
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"token {gh_auth}",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
         title, body = normalize_commit_message(commit_message)
         if not self.prefix_commit:
             title = remove_commit_prefix(title)
@@ -477,15 +481,15 @@ $ cherry_picker --abort
         }
         url = CREATE_PR_URL_TEMPLATE.format(config=self.config)
         try:
-            response = requests.post(
-                url, headers=request_headers, json=data, timeout=30
+            response = urllib3.request(
+                "POST", url, headers=request_headers, json=data, timeout=30
             )
-        except requests.exceptions.RequestException as req_exc:
+        except urllib3.exceptions.HTTPError as req_exc:
             raise GitHubException(f"Creating PR on GitHub failed: {req_exc}")
         else:
-            sc = response.status_code
-            txt = response.text
-            if sc != requests.codes.created:
+            sc = response.status
+            if sc != 201:
+                txt = response.data.decode("utf-8", errors="replace")
                 raise GitHubException(
                     f"Unexpected response ({sc}) when creating PR on GitHub: {txt}"
                 )

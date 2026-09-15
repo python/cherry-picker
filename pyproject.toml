@@ -26,10 +26,9 @@ classifiers = [
 ]
 dynamic = [ "version" ]
 dependencies = [
-  "gidgethub",
-  "requests",
   "stamina",
   "tomli>=1.1; python_version<'3.11'",
+  "urllib3>=2",
 ]
 optional-dependencies.dev = [
   "pytest",
