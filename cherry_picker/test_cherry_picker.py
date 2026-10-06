@@ -679,13 +679,17 @@ Co-authored-by: PR Co-Author <another@author.com>""",
         ),
         # ensure the existing commit prefix is replaced
         (
-            "[3.7] [3.8] Fix broken `Show Source` links on documentation "
-            "pages (GH-3113) (GH-3114) (GH-3115)",
-            """[3.6] Fix broken `Show Source` links on documentation """
-            """pages (GH-3113) (GH-3114) (GH-3115)
+            (
+                "[3.7] [3.8] Fix broken `Show Source` links on documentation "
+                "pages (GH-3113) (GH-3114) (GH-3115)"
+            ),
+            (
+                """[3.6] Fix broken `Show Source` links on documentation """
+                """pages (GH-3113) (GH-3114) (GH-3115)
 (cherry picked from commit b9ff498793611d1c6a9b99df464812931a1e2d69)
 
-Co-authored-by: PR Author <author@name.email>""",
+Co-authored-by: PR Author <author@name.email>"""
+            ),
         ),
     ),
 )
