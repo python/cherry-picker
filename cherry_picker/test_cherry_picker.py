@@ -318,13 +318,11 @@ def test_upstream_name(
     assert cp.upstream == remote_name
 
 
-@pytest.mark.parametrize(
-    "value,expected", ((None, "default"), ("", "default"), ("set", "set"))
-)
+@pytest.mark.parametrize("value,expected", ((None, None), ("", ""), ("set", "set")))
 def test_get_git_config_val(value, expected, tmp_git_repo_dir, git_config):
     if value is not None:
         git_config("--local", "cherry-picker.test-key", value)
-    assert get_git_config_val("cherry-picker.test-key", "default") == expected
+    assert get_git_config_val("cherry-picker.test-key") == expected
 
 
 @pytest.mark.parametrize(

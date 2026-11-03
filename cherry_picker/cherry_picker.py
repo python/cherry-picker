@@ -139,7 +139,9 @@ class CherryPicker:
         if dry_run:
             print("Dry run requested, listing expected command sequence")
 
-        self.pr_remote = pr_remote or get_git_config_val("remote.pushDefault", "origin")
+        self.pr_remote = (
+            pr_remote or get_git_config_val("remote.pushDefault") or "origin"
+        )
         self.upstream_remote = upstream_remote
         self.commit_sha1 = commit_sha1
         self.branches = branches
@@ -727,8 +729,12 @@ $ cherry_picker --abort
     def is_mirror(self) -> bool:
         """Return True if the current repository was created with --mirror."""
 
-        mirror = get_git_config_val("remote.origin.mirror", "", local=True)
-        return mirror.startswith("true")
+        cmd = ["git", "config", "--local", "--get", "remote.origin.mirror"]
+        try:
+            out = self.run_cmd(cmd, required_real_result=True)
+        except subprocess.CalledProcessError:
+            return False
+        return out.startswith("true")
 
 
 def get_parser():
@@ -1097,19 +1103,18 @@ def load_val_from_git_cfg(cfg_key_suffix):
     return get_git_config_val(cfg_key, local=True)
 
 
-def get_git_config_val(key, default=None, *, local=False):
-    """Retrieve one option from Git config, or default if unset or empty."""
+def get_git_config_val(key, *, local=False):
+    """Retrieve one option from Git config, or None if unset."""
     scope = ("--local",) if local else ()
     cmd = "git", "config", *scope, "--get", key
     try:
-        value = (
+        return (
             subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
             .strip()
             .decode("utf-8")
         )
     except subprocess.CalledProcessError:
-        value = None
-    return value or default
+        return None
 
 
 def from_git_rev_read(path):
