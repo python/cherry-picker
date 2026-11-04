@@ -537,6 +537,15 @@ $ cherry_picker --abort
             raise ValueError("At least one branch must be specified.")
         set_state(WORKFLOW_STATES.BACKPORT_STARTING)
         self.fetch_upstream()
+        # Resolve short or uppercase SHAs to the full SHA, so that the backport
+        # branch name is parsed correctly later on.
+        cmd = ["git", "rev-parse", "--verify", f"{self.commit_sha1}^{{commit}}"]
+        try:
+            self.commit_sha1 = self.run_cmd(cmd, required_real_result=True).strip()
+        except subprocess.CalledProcessError:
+            print(f"Error resolving commit {self.commit_sha1}.")
+            reset_state()
+            raise CherryPickException(f"Error resolving commit {self.commit_sha1}.")
         self.remember_previous_branch()
 
         set_state(WORKFLOW_STATES.BACKPORT_LOOPING)
