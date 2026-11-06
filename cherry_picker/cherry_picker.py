@@ -414,6 +414,18 @@ $ cherry_picker --abort
 """)
         self.set_paused_state()
 
+    def pause_after_push_failure(self, cherry_pick_branch):
+        print(f"""
+Failed to push {cherry_pick_branch} to {self.pr_remote} ☹
+... Stopping here. The branch {cherry_pick_branch} has been kept.
+To retry the push:
+$ cherry_picker --continue
+
+To abort the cherry-pick and cleanup:
+$ cherry_picker --abort
+""")
+        self.set_paused_state()
+
     def push_to_remote(self, base_branch, head_branch, commit_message=""):
         """git push <origin> <branchname>"""
         set_state(WORKFLOW_STATES.PUSHING_TO_REMOTE)
@@ -577,6 +589,10 @@ $ cherry_picker --abort
                         print(self.get_exit_message(maint_branch))
                         self.set_paused_state()
                         raise
+                    if get_state() == WORKFLOW_STATES.PUSHING_TO_REMOTE_FAILED:
+                        # Keep the branch so that the work isn't lost.
+                        self.pause_after_push_failure(cherry_pick_branch)
+                        return  # to preserve the correct state
                     if not self.is_mirror():
                         self.cleanup_branch(cherry_pick_branch)
                 else:
@@ -665,6 +681,10 @@ $ cherry_picker --abort
 
             if self.push:
                 self.push_to_remote(base, cherry_pick_branch)
+                if get_state() == WORKFLOW_STATES.PUSHING_TO_REMOTE_FAILED:
+                    # Keep the branch so that the work isn't lost.
+                    self.pause_after_push_failure(cherry_pick_branch)
+                    return  # to preserve the correct state
 
                 if not self.is_mirror():
                     self.cleanup_branch(cherry_pick_branch)
