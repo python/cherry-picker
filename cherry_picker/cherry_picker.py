@@ -138,7 +138,9 @@ class CherryPicker:
         if dry_run:
             print("Dry run requested, listing expected command sequence")
 
-        self.pr_remote = pr_remote
+        self.pr_remote = (
+            pr_remote or get_git_config_val("remote.pushDefault") or "origin"
+        )
         self.upstream_remote = upstream_remote
         self.commit_sha1 = commit_sha1
         self.branches = branches
@@ -755,8 +757,11 @@ def get_parser():
     parser.add_argument(
         "--pr-remote",
         metavar="REMOTE",
-        default="origin",
-        help="Git remote to use for PR branches",
+        default=None,
+        help=(
+            "Git remote to use for PR branches "
+            "(default: remote.pushDefault or origin)"
+        ),
     )
     parser.add_argument(
         "--upstream-remote",
@@ -1099,7 +1104,13 @@ def wipe_cfg_vals_from_git_cfg(*cfg_opts):
 def load_val_from_git_cfg(cfg_key_suffix):
     """Retrieve one option from Git config."""
     cfg_key = f'cherry-picker.{cfg_key_suffix.replace("_", "-")}'
-    cmd = "git", "config", "--local", "--get", cfg_key
+    return get_git_config_val(cfg_key, local=True)
+
+
+def get_git_config_val(key, *, local=False):
+    """Retrieve one option from Git config, or None if unset."""
+    scope = ("--local",) if local else ()
+    cmd = "git", "config", *scope, "--get", key
     try:
         return (
             subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
