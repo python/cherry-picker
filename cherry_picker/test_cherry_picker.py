@@ -1157,6 +1157,64 @@ def test_backport_success(
     assert get_state() == WORKFLOW_STATES.UNSET
 
 
+@pytest.mark.parametrize("sha_transform", (lambda sha: sha[:6], str.upper))
+def test_backport_resolves_commit_sha(
+    tmp_git_repo_dir,
+    git_branch,
+    git_add,
+    git_commit,
+    git_checkout,
+    git_remote,
+    sha_transform,
+):
+    cherry_pick_target_branches = ("3.8",)
+    pr_remote = "origin"
+    test_file = "some.file"
+    tmp_git_repo_dir.join(test_file).write("some contents")
+    git_remote("add", pr_remote, "https://github.com/python/cpython.git")
+    git_branch(cherry_pick_target_branches[0])
+    git_branch(
+        f"{pr_remote}/{cherry_pick_target_branches[0]}", cherry_pick_target_branches[0]
+    )
+    git_add(test_file)
+    git_commit("Add a test file")
+    scm_revision = get_sha1_from("HEAD")
+
+    git_checkout(cherry_pick_target_branches[0])  # simulate backport method logic
+
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker(
+            pr_remote,
+            sha_transform(scm_revision),
+            cherry_pick_target_branches,
+            push=False,
+        )
+
+    with mock.patch.object(cherry_picker, "fetch_upstream"):
+        cherry_picker.backport()
+
+    assert cherry_picker.commit_sha1 == scm_revision
+    assert get_current_branch() == f"backport-{scm_revision[:7]}-3.8"
+    assert get_state() == WORKFLOW_STATES.BACKPORT_PAUSED
+
+
+def test_backport_unknown_commit_sha(tmp_git_repo_dir, git_branch):
+    git_branch("3.8")
+
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker("origin", "0" * 40, ["3.8"])
+
+    with (
+        mock.patch.object(cherry_picker, "fetch_upstream"),
+        mock.patch.object(cherry_picker, "checkout_branch") as checkout_branch,
+        pytest.raises(CherryPickException),
+    ):
+        cherry_picker.backport()
+
+    checkout_branch.assert_not_called()
+    assert get_state() == WORKFLOW_STATES.UNSET
+
+
 @pytest.mark.parametrize("already_committed", (True, False))
 @pytest.mark.parametrize("push", (True, False))
 def test_backport_pause_and_continue(
