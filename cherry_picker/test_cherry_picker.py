@@ -972,11 +972,33 @@ def test_push_to_remote_interactive(tmp_git_repo_dir):
 
     with (
         mock.patch.object(cherry_picker, "run_cmd"),
+        mock.patch.object(cherry_picker, "gh_cli_available", return_value=False),
         mock.patch.object(cherry_picker, "open_pr"),
         mock.patch.object(cherry_picker, "get_pr_url", return_value="https://pr_url"),
     ):
         cherry_picker.push_to_remote("main", "backport-branch-test")
     assert get_state() == WORKFLOW_STATES.PR_OPENING
+
+
+@mock.patch.object(CherryPicker, "username", new_callable=mock.PropertyMock)
+def test_push_to_remote_gh_cli(mock_username, tmp_git_repo_dir, monkeypatch):
+    monkeypatch.delenv("GH_AUTH", raising=False)
+    mock_username.return_value = "username"
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker("origin", "xxx", [])
+
+    with (
+        mock.patch.object(cherry_picker, "gh_cli_available", return_value=True),
+        mock.patch.object(
+            cherry_picker,
+            "run_cmd",
+            return_value="https://github.com/python/cpython/pull/1347\n",
+        ) as run_cmd,
+    ):
+        cherry_picker.push_to_remote("3.14", "backport-branch-test", "Title")
+
+    assert run_cmd.call_args.args[0][:3] == ["gh", "pr", "create"]
+    assert cherry_picker.pr_number == 1347
 
 
 def test_push_to_remote_botflow(tmp_git_repo_dir, monkeypatch):

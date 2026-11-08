@@ -8,6 +8,7 @@ import enum
 import functools
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tomllib
@@ -448,6 +449,15 @@ $ cherry_picker --abort
                 except GitHubException:
                     set_state(WORKFLOW_STATES.PR_CREATING_FAILED)
                     raise
+            elif self.gh_cli_available():
+                set_state(WORKFLOW_STATES.PR_CREATING)
+                try:
+                    self.create_pr_with_gh_cli(
+                        base_branch, head_branch, commit_message=commit_message
+                    )
+                except GitHubException:
+                    set_state(WORKFLOW_STATES.PR_CREATING_FAILED)
+                    raise
             else:
                 set_state(WORKFLOW_STATES.PR_OPENING)
                 self.open_pr(self.get_pr_url(base_branch, head_branch))
@@ -463,10 +473,7 @@ $ cherry_picker --abort
             "Authorization": f"token {gh_auth}",
             "X-GitHub-Api-Version": "2022-11-28",
         }
-        title, body = normalize_commit_message(commit_message)
-        if not self.prefix_commit:
-            title = remove_commit_prefix(title)
-            title = f"[{base_branch}] {title}"
+        title, body = self.get_pr_title_and_body(base_branch, commit_message)
         data = {
             "title": title,
             "body": body,
@@ -492,6 +499,52 @@ $ cherry_picker --abort
         response_data = response.json()
         print(f"Backport PR created at {response_data['html_url']}")
         self.pr_number = response_data["number"]
+
+    def get_pr_title_and_body(
+        self, base_branch: str, commit_message: str
+    ) -> tuple[str, str]:
+        title, body = normalize_commit_message(commit_message)
+        if not self.prefix_commit:
+            title = remove_commit_prefix(title)
+            title = f"[{base_branch}] {title}"
+        return title, body
+
+    def gh_cli_available(self) -> bool:
+        if shutil.which("gh") is None:
+            return False
+        cmd = ["gh", "auth", "status", "--hostname", "github.com"]
+        return subprocess.run(cmd, capture_output=True).returncode == 0
+
+    @stamina.retry(on=GitHubException, timeout=120)
+    def create_pr_with_gh_cli(
+        self, base_branch: str, head_branch: str, *, commit_message: str
+    ) -> None:
+        title, body = self.get_pr_title_and_body(base_branch, commit_message)
+        cmd = [
+            "gh",
+            "pr",
+            "create",
+            "--repo",
+            f"{self.config['team']}/{self.config['repo']}",
+            "--base",
+            base_branch,
+            "--head",
+            f"{self.username}:{head_branch}",
+            "--title",
+            title,
+            "--body",
+            body,
+        ]
+        if self.config["draft_pr"]:
+            cmd.append("--draft")
+        try:
+            output = self.run_cmd(cmd)
+        except subprocess.CalledProcessError as exc:
+            raise GitHubException(f"Creating PR with gh failed: {_decode(exc.output)}")
+        if output:
+            url = output.strip().splitlines()[-1]
+            print(f"Backport PR created at {url}")
+            self.pr_number = int(url.rsplit("/", 1)[-1])
 
     def open_pr(self, url):
         """
@@ -664,7 +717,7 @@ $ cherry_picker --abort
                     self.run_cmd(cmd)
 
             if self.push:
-                self.push_to_remote(base, cherry_pick_branch)
+                self.push_to_remote(base, cherry_pick_branch, commit_message)
 
                 if not self.is_mirror():
                     self.cleanup_branch(cherry_pick_branch)
@@ -797,8 +850,9 @@ def get_parser():
         default=True,
         help=(
             "If auto PR is enabled, cherry-picker will automatically open a PR "
-            "through API if `GH_AUTH` env var is set, or automatically open the PR "
-            "creation page in the web browser otherwise."
+            "through API if `GH_AUTH` env var is set, through the GitHub CLI if it "
+            "is logged in, or automatically open the PR creation page in the web "
+            "browser otherwise."
         ),
     )
     parser.add_argument(
