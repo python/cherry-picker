@@ -224,7 +224,7 @@ class CherryPicker:
     def fetch_upstream(self):
         """git fetch <upstream>"""
         set_state(WORKFLOW_STATES.FETCHING_UPSTREAM)
-        print(f"Fetching from Git remote {self.upstream}")
+        print(f"Fetching from Git remote {self.upstream}...")
         cmd = ["git", "fetch", self.upstream, "--no-tags"]
         self.run_cmd(cmd)
         set_state(WORKFLOW_STATES.FETCHED_UPSTREAM)
@@ -426,7 +426,7 @@ $ cherry_picker --abort
         cmd.append(self.pr_remote)
         if not self.is_mirror():
             cmd.append(f"{head_branch}:{head_branch}")
-        print(f"Pushing to Git remote {self.pr_remote}")
+        print(f"Pushing to Git remote {self.pr_remote}...")
         try:
             self.run_cmd(cmd)
             set_state(WORKFLOW_STATES.PUSHED_TO_REMOTE)
