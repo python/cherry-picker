@@ -756,7 +756,7 @@ def get_parser():
         default=None,
         help=(
             "Git remote to use for PR branches "
-            "(default: remote.pushDefault or origin)"
+            "(default: `remote.pushDefault` or `origin`)"
         ),
     )
     parser.add_argument(
