@@ -25,6 +25,7 @@ from .cherry_picker import (
     get_commits_from_backport_branch,
     get_current_branch,
     get_full_sha_from_short,
+    get_git_config_val,
     get_sha1_from,
     get_state,
     load_config,
@@ -315,6 +316,13 @@ def test_upstream_name(
             upstream_remote=upstream_remote,
         )
     assert cp.upstream == remote_name
+
+
+@pytest.mark.parametrize("value,expected", ((None, None), ("", ""), ("set", "set")))
+def test_get_git_config_val(value, expected, tmp_git_repo_dir, git_config):
+    if value is not None:
+        git_config("--local", "cherry-picker.test-key", value)
+    assert get_git_config_val("cherry-picker.test-key") == expected
 
 
 @pytest.mark.parametrize(

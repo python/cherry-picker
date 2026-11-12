@@ -23,7 +23,8 @@ options:
   -h, --help            show this help message and exit
   -V, --version         show program's version number and exit
   --dry-run             Prints out the commands, but not executed
-  --pr-remote REMOTE    Git remote to use for PR branches
+  --pr-remote REMOTE    Git remote to use for PR branches (default:
+                        remote.pushDefault or origin)
   --upstream-remote REMOTE
                         Git remote to use for upstream branches
   --abort               Abort current cherry-pick and clean up branch
@@ -89,9 +90,11 @@ $ git remote add upstream https://github.com/python/cpython.git
 ```
 
 By default, the PR branches used to submit pull requests back to the main
-repository are pushed to `origin`. If this is incorrect, then the correct
-remote will need be specified using the `--pr-remote` option (e.g.
-`--pr-remote pr` to use a remote named `pr`).
+repository are pushed to Git's `remote.pushDefault`, or `origin` if that is
+not set. To set it for a group of checkouts, use an
+[`includeIf`](https://git-scm.com/docs/git-config#_conditional_includes)
+in your global Git config. To use a remote named `pr`, either pass
+`--pr-remote pr` or set `remote.pushDefault` to `pr`.
 
 
 ## Cherry-picking 🐍🍒⛏️
@@ -122,7 +125,8 @@ Use the full commit hash for `cherry_picker.py`.
 
 ```
 --dry-run                 Dry Run Mode.  Prints out the commands, but not executed.
---pr-remote REMOTE        Specify the git remote to push into.  Default is 'origin'.
+--pr-remote REMOTE        Specify the git remote to push into.  Default is
+                          remote.pushDefault or 'origin'.
 --upstream-remote REMOTE  Specify the git remote to use for upstream branches.
                           Default is 'upstream' or 'origin' if the former doesn't exist.
 --status                  Do `git status` in cpython directory.
