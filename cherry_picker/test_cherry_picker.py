@@ -1159,10 +1159,59 @@ def test_backport_success(
         mock.patch.object(
             cherry_picker, "amend_commit_message", return_value="commit message"
         ),
+        mock.patch.object(cherry_picker, "push_to_remote", side_effect=_fake_push),
     ):
         cherry_picker.backport()
 
     assert get_state() == WORKFLOW_STATES.UNSET
+
+
+def test_backport_push_fail_keeps_branch(
+    tmp_git_repo_dir, git_branch, git_add, git_commit, git_checkout, git_remote
+):
+    cherry_pick_target_branches = ("3.15",)
+    pr_remote = "origin"
+    test_file = "some.file"
+    tmp_git_repo_dir.join(test_file).write("some contents")
+    # A remote that doesn't exist, so pushing to it fails.
+    git_remote("add", pr_remote, str(tmp_git_repo_dir.join("nonexistent")))
+    git_branch(cherry_pick_target_branches[0])
+    git_branch(
+        f"{pr_remote}/{cherry_pick_target_branches[0]}", cherry_pick_target_branches[0]
+    )
+    git_add(test_file)
+    git_commit("Add a test file")
+    scm_revision = get_sha1_from("HEAD")
+
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker(
+            pr_remote, scm_revision, cherry_pick_target_branches
+        )
+    backport_branch_name = cherry_picker.get_cherry_pick_branch(
+        cherry_pick_target_branches[0]
+    )
+
+    with (
+        mock.patch.object(cherry_picker, "fetch_upstream"),
+        mock.patch.object(
+            cherry_picker, "amend_commit_message", return_value="commit message"
+        ),
+        mock.patch.object(cherry_picker, "cleanup_branch") as cleanup_branch,
+    ):
+        cherry_picker.backport()
+
+    cleanup_branch.assert_not_called()
+    assert get_state() == WORKFLOW_STATES.BACKPORT_PAUSED
+    assert get_current_branch() == backport_branch_name
+    assert len(get_commits_from_backport_branch(cherry_pick_target_branches[0])) == 1
+
+
+def _fake_push(*args, **kwargs):
+    set_state(WORKFLOW_STATES.PUSHED_TO_REMOTE)
+
+
+def _fake_push_fail(*args, **kwargs):
+    set_state(WORKFLOW_STATES.PUSHING_TO_REMOTE_FAILED)
 
 
 @pytest.mark.parametrize("already_committed", (True, False))
@@ -1243,6 +1292,7 @@ Co-authored-by: Author Name <author@name.email>"""
         ) as get_updated_commit_message,
         mock.patch.object(cherry_picker, "checkout_branch"),
         mock.patch.object(cherry_picker, "fetch_upstream"),
+        mock.patch.object(cherry_picker, "push_to_remote", side_effect=_fake_push),
         mock.patch.object(cherry_picker, "cleanup_branch"),
     ):
         cherry_picker.continue_cherry_pick()
@@ -1258,6 +1308,67 @@ Co-authored-by: Author Name <author@name.email>"""
         assert get_state() == WORKFLOW_STATES.BACKPORTING_CONTINUATION_SUCCEED
     else:
         assert get_state() == WORKFLOW_STATES.BACKPORT_PAUSED
+
+
+def test_continue_cherry_pick_push_fail_keeps_branch(
+    tmp_git_repo_dir, git_branch, git_add, git_commit, git_checkout, git_remote
+):
+    cherry_pick_target_branches = ("3.8",)
+    pr_remote = "origin"
+    test_file = "some.file"
+    tmp_git_repo_dir.join(test_file).write("some contents")
+    git_remote("add", pr_remote, "https://github.com/python/cpython.git")
+    git_branch(cherry_pick_target_branches[0])
+    git_branch(
+        f"{pr_remote}/{cherry_pick_target_branches[0]}", cherry_pick_target_branches[0]
+    )
+    git_add(test_file)
+    git_commit("Add a test file")
+    scm_revision = get_sha1_from("HEAD")
+
+    git_checkout(cherry_pick_target_branches[0])  # simulate backport method logic
+
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker(
+            pr_remote, scm_revision, cherry_pick_target_branches, push=False
+        )
+
+    with (
+        mock.patch.object(cherry_picker, "fetch_upstream"),
+        mock.patch.object(
+            cherry_picker, "amend_commit_message", return_value="commit message"
+        ),
+    ):
+        cherry_picker.backport()
+
+    assert get_state() == WORKFLOW_STATES.BACKPORT_PAUSED
+
+    with mock.patch("cherry_picker.cherry_picker.validate_sha", return_value=True):
+        cherry_picker = CherryPicker(pr_remote, "", [], push=True)
+
+    with (
+        mock.patch("cherry_picker.cherry_picker.wipe_cfg_vals_from_git_cfg"),
+        mock.patch(
+            "cherry_picker.cherry_picker.get_full_sha_from_short",
+            return_value="xxxxxxyyyyyy",
+        ),
+        mock.patch("cherry_picker.cherry_picker.get_base_branch", return_value="3.8"),
+        mock.patch(
+            "cherry_picker.cherry_picker.get_current_branch",
+            return_value="backport-xxx-3.8",
+        ),
+        mock.patch.object(
+            cherry_picker, "amend_commit_message", return_value="commit message"
+        ),
+        mock.patch.object(cherry_picker, "checkout_branch"),
+        mock.patch.object(cherry_picker, "fetch_upstream"),
+        mock.patch.object(cherry_picker, "push_to_remote", side_effect=_fake_push_fail),
+        mock.patch.object(cherry_picker, "cleanup_branch") as cleanup_branch,
+    ):
+        cherry_picker.continue_cherry_pick()
+
+    cleanup_branch.assert_not_called()
+    assert get_state() == WORKFLOW_STATES.BACKPORT_PAUSED
 
 
 def test_continue_cherry_pick_invalid_state(tmp_git_repo_dir):
