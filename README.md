@@ -34,8 +34,9 @@ options:
   --auto-pr, --no-auto-pr
                         If auto PR is enabled, cherry-picker will
                         automatically open a PR through API if
-                        GH_AUTH env var is set, or automatically open
-                        the PR creation page in the web browser otherwise.
+                        GH_AUTH env var is set, through the GitHub CLI
+                        if it is logged in, or automatically open the PR
+                        creation page in the web browser otherwise.
   --config-path CONFIG-PATH
                         Path to config file, .cherry_picker.toml from
                         project root by default. You can prepend a colon-
