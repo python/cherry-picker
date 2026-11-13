@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.8.0
+
+* Default `--pr-remote` to Git's `remote.pushDefault` by @cmaloney in https://github.com/python/cherry-picker/pull/198
+* Report fetch and push operations by @brettcs in https://github.com/python/cherry-picker/pull/206
+* Replace maintenance-mode Gitdgethub with urllib3 by @hugovk in https://github.com/python/cherry-picker/pull/192
+* Add support for Python 3.16 by @hugovk in https://github.com/python/cherry-picker/pull/202
+* Drop support for EOL Python 3.10 by @hugovk in https://github.com/python/cherry-picker/pull/194
+
 ## 2.7.0
 
 * Improve error output when a command fails by @hugovk in https://github.com/python/cherry-picker/pull/176
